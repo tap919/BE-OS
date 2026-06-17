@@ -1,0 +1,8 @@
+{
+  "name": "BE OS",
+  "description": "A comprehensive operating system and resource hub for Black empowerment, featuring financial literacy, wealth access, fair housing, and legal empowerment tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
