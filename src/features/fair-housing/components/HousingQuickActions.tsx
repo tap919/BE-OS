@@ -64,6 +64,153 @@ export function HousingQuickActions() {
 
   const renderStepContent = () => {
     if (!activeAction) return null;
+
+    if (activeAction.id === "lease") {
+      if (step === 0) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">Paste your lease text here</label>
+            <textarea 
+              className="w-full p-3 border border-slate-300 rounded-lg h-32 text-sm" 
+              placeholder="Paste lease terms..."
+            />
+          </div>
+        );
+      }
+      if (step === 1) {
+         return (
+           <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-900">
+             <div className="flex items-center gap-2 mb-2 font-bold"><CheckCircle className="w-4 h-4 text-indigo-600"/> Extracted Key Terms</div>
+             <ul className="list-disc pl-5 space-y-1">
+               <li>Lease Type: Fixed Term</li>
+               <li>Security Deposit: Confirmed 1.5x rent.</li>
+               <li>Maintenance: Standard wear & tear exempt.</li>
+             </ul>
+           </div>
+         );
+      }
+      if (step === 2) {
+         return (
+           <div className="p-4 bg-red-50 border border-red-100 rounded-lg text-sm text-red-900">
+             <div className="flex items-center gap-2 mb-2 font-bold"><ShieldAlert className="w-4 h-4 text-red-600"/> Flagged Risks</div>
+             <p>The clause restricting "extended guests" is over-broad under certain state laws and could be enforced discriminatorily. Consider negotiating a specific time framing.</p>
+           </div>
+         );
+      }
+    }
+
+    if (activeAction.id === "eviction") {
+      if (step === 0) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">Select your state</label>
+            <select className="w-full p-3 border border-slate-300 rounded-lg">
+              <option>New York</option>
+              <option>California</option>
+              <option>Texas</option>
+              <option>Georgia</option>
+            </select>
+          </div>
+        );
+      }
+      if (step === 1) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">Did you receive a formal written notice?</label>
+            <div className="flex gap-4">
+               <label className="flex items-center gap-2"><input type="radio" name="notice" /> Yes</label>
+               <label className="flex items-center gap-2"><input type="radio" name="notice" /> No</label>
+            </div>
+          </div>
+        );
+      }
+      if (step === 2) {
+         return (
+           <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700">
+             <h4 className="font-bold mb-2">Your Immediate Rights:</h4>
+             <ul className="list-disc pl-5 space-y-1">
+               <li>Self-help eviction (changing locks) by landlord is illegal.</li>
+               <li>You have the right to a court hearing.</li>
+               <li>Possible defenses: failure to maintain habitable premises.</li>
+             </ul>
+           </div>
+         );
+      }
+    }
+
+    if (activeAction.id === "homeownership") {
+      if (step === 0) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">Estimated Credit Score</label>
+            <input type="number" className="w-full p-3 border border-slate-300 rounded-lg" placeholder="e.g. 680" />
+            <label className="block text-sm font-medium text-slate-700 mt-2">Saved for down payment</label>
+            <input type="text" className="w-full p-3 border border-slate-300 rounded-lg" placeholder="$..." />
+          </div>
+        );
+      }
+      if (step === 1) {
+        return (
+           <div className="space-y-2">
+             <div className="p-3 border border-slate-200 rounded-lg bg-slate-50 flex justify-between items-center">
+               <span className="font-medium text-sm text-slate-800">FHA Loan Programs</span>
+               <span className="text-xs bg-slate-200 px-2 py-1 rounded">3.5% down</span>
+             </div>
+             <div className="p-3 border border-slate-200 rounded-lg bg-slate-50 flex justify-between items-center">
+               <span className="font-medium text-sm text-slate-800">NACA Program</span>
+               <span className="text-xs bg-slate-200 px-2 py-1 rounded">0% down, no closing costs</span>
+             </div>
+           </div>
+        );
+      }
+      if (step === 2) {
+         return (
+           <div className="text-center py-4">
+             <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
+             <h3 className="font-bold text-slate-800">Plan Generated</h3>
+             <p className="text-sm text-slate-500 mb-4">We've generated a 6-month readiness checklist based on your profile.</p>
+           </div>
+         );
+      }
+    }
+
+    if (activeAction.id === "bias") {
+      if (step === 0) {
+        return (
+          <div className="grid grid-cols-1 gap-2">
+            {["Renting/Leasing", "Home Appraisal", "Mortgage Lending", "HOA Discrimination"].map(type => (
+              <label key={type} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                <input type="radio" name="biasType" value={type} />
+                <span className="font-medium text-slate-700 text-sm">{type}</span>
+              </label>
+            ))}
+          </div>
+        );
+      }
+      if (step === 1) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">What specific statements or actions occurred?</label>
+            <textarea 
+              className="w-full p-3 border border-slate-300 rounded-lg h-24 text-sm" 
+              placeholder="Describe the incident..."
+            />
+          </div>
+        );
+      }
+      if (step === 2) {
+         return (
+           <div className="space-y-3">
+             <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+               <h4 className="font-bold text-sm text-slate-800">Local Fair Housing Agency</h4>
+               <p className="text-xs text-slate-600">HUD Office of Fair Housing and Equal Opportunity (FHEO)</p>
+               <button className="mt-2 w-full py-2 bg-slate-900 text-white rounded text-sm font-medium">File Complaint Online</button>
+             </div>
+           </div>
+         );
+      }
+    }
+
     return (
       <div className="text-center py-8">
         <IconComponent className="w-12 h-12 text-indigo-300 mx-auto mb-4" icon={activeAction.icon} />

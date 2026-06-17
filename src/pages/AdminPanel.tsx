@@ -129,13 +129,50 @@ function ResourceEditor() {
   const [resources, setResources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [formData, setFormData] = useState({ title: "", url: "", description: "", section: "financial_literacy" });
+  const { getToken } = useAuth();
   
+  const fetchResources = async () => {
+    setLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/admin/resources", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setResources(d);
+      }
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch("/api/resources?section=financial_literacy") // Load some default ones to show
-      .then(r => r.json())
-      .then(d => { setResources(d); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+    fetchResources();
+  }, [getToken]);
+
+  const handleSave = async () => {
+    try {
+      const token = await getToken();
+      await fetch("/api/admin/resources", {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
+      });
+      setIsAdding(false);
+      setFormData({ title: "", url: "", description: "", section: "financial_literacy" });
+      fetchResources();
+    } catch(err) {
+      console.error(err);
+      alert("Failed to save resource");
+    }
+  };
 
   return (
     <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 animate-in fade-in">
@@ -155,20 +192,24 @@ function ResourceEditor() {
 
       {isAdding && (
         <div className="bg-slate-800 p-4 rounded-xl mb-6 border border-amber-500/30">
-          <h4 className="font-bold text-white mb-4">Add New Resource Array</h4>
+          <h4 className="font-bold text-white mb-4">Add New Resource</h4>
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <input type="text" placeholder="Title" className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
-            <input type="text" placeholder="URL" className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
-            <input type="text" placeholder="Description (2-3 sentences)" className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm col-span-2" />
-            <select className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm">
-              <option>Financial Literacy</option>
-              <option>Business Builder</option>
-              <option>Legal Defense</option>
+            <input type="text" placeholder="Title" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
+            <input type="text" placeholder="URL" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
+            <input type="text" placeholder="Description (2-3 sentences)" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm col-span-2" />
+            <select value={formData.section} onChange={e => setFormData({...formData, section: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm">
+              <option value="financial">Financial</option>
+              <option value="business">Business</option>
+              <option value="legal">Legal</option>
+              <option value="housing">Housing</option>
+              <option value="community">Community</option>
+              <option value="capital">Capital</option>
             </select>
           </div>
           <button 
-            onClick={() => { alert("Saved to database!"); setIsAdding(false); }}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded"
+            onClick={handleSave}
+            disabled={!formData.title || !formData.url || !formData.description}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded"
           >
             Save Entry
           </button>
@@ -179,17 +220,17 @@ function ResourceEditor() {
         <div className="text-slate-400">Loading DB entries...</div>
       ) : (
         <div className="space-y-2">
-          {resources.slice(0, 5).map(r => (
+          {resources.slice(0, 50).map(r => (
             <div key={r.id} className="p-3 border border-slate-800 rounded bg-slate-800/50 flex justify-between items-center group">
               <div>
-                <h4 className="font-bold text-white text-sm">{r.title}</h4>
+                <h4 className="font-bold text-white text-sm">[{r.section.toUpperCase()}] {r.title}</h4>
                 <p className="text-xs text-slate-400 font-mono">{r.url}</p>
               </div>
-              <button onClick={() => alert("Edit modal would open")} className="text-xs px-2 py-1 bg-slate-700 text-white rounded hover:bg-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+              <button disabled className="text-xs px-2 py-1 bg-slate-700/50 text-slate-400 rounded cursor-not-allowed">Edit (Coming Soon)</button>
             </div>
           ))}
           <p className="text-xs tracking-wider uppercase text-slate-500 mt-4 pt-4 border-t border-slate-800 text-center">
-            Showing first 5 rows (read-only in this view)
+            Showing up to 50 rows (Edit functionality upcoming)
           </p>
         </div>
       )}

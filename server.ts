@@ -3,7 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { db } from "./src/db";
-import { resources, users, saved_resources, user_stats } from "./src/db/schema";
+import { resources, users, saved_resources, user_stats, blockchain_credentials, blockchain_circles, blockchain_grants } from "./src/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import helmet from "helmet";
@@ -61,6 +61,18 @@ async function startServer() {
     try {
       const decodedToken = await auth.verifyIdToken(idToken);
       (req as any).user = decodedToken;
+      
+      try {
+        db.insert(users).values({
+          id: decodedToken.uid,
+          email: decodedToken.email || "",
+          role: "user",
+          createdAt: new Date()
+        }).onConflictDoNothing().run();
+      } catch (dbErr) {
+        console.error("Failed to sync user to DB:", dbErr);
+      }
+
       next();
     } catch (err) {
       console.error("Token verification failed:", err);
@@ -307,6 +319,62 @@ async function startServer() {
     }
   });
 
+  // Blockchain Mock Data Endpoints
+  app.get("/api/blockchain/state", requireAuth, async (req, res) => {
+    try {
+      const uid = (req as any).user.uid;
+      const creds = db.select().from(blockchain_credentials).where(eq(blockchain_credentials.userId, uid)).all();
+      const circs = db.select().from(blockchain_circles).where(eq(blockchain_circles.userId, uid)).all();
+      const grnts = db.select().from(blockchain_grants).where(eq(blockchain_grants.userId, uid)).all();
+      res.json({ credentials: creds, circles: circs, contracts: grnts });
+    } catch(err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to fetch blockchain state" });
+    }
+  });
+
+  app.post("/api/blockchain/credentials", requireAuth, async (req, res) => {
+    try {
+      const uid = (req as any).user.uid;
+      const { type, issuer, date, hash } = req.body;
+      db.insert(blockchain_credentials).values({
+        id: crypto.randomUUID(), userId: uid, type, issuer, date, hash, createdAt: new Date()
+      }).run();
+      res.json({ success: true });
+    } catch(err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to add credential" });
+    }
+  });
+
+  app.post("/api/blockchain/circles", requireAuth, async (req, res) => {
+    try {
+      const uid = (req as any).user.uid;
+      const { name, poolSize, status } = req.body;
+      db.insert(blockchain_circles).values({
+        id: crypto.randomUUID(), userId: uid, name, poolSize, status, createdAt: new Date()
+      }).run();
+      res.json({ success: true });
+    } catch(err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to add circle" });
+    }
+  });
+
+  app.post("/api/blockchain/grants", requireAuth, async (req, res) => {
+    try {
+      const uid = (req as any).user.uid;
+      const { name, amount, status } = req.body;
+      db.insert(blockchain_grants).values({
+        id: crypto.randomUUID(), userId: uid, name, amount, status, createdAt: new Date()
+      }).run();
+      res.json({ success: true });
+    } catch(err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to add grant" });
+    }
+  });
+
   // Admin Middleware
   const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
@@ -331,6 +399,44 @@ async function startServer() {
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // Admin: Create Resource
+  app.post("/api/admin/resources", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { title, description, url, section, type, tags } = req.body;
+      const id = `res_${crypto.randomUUID()}`;
+      db.insert(resources).values({
+        id,
+        section,
+        title,
+        description,
+        url,
+        type: type || "article",
+        tags: tags || []
+      }).run();
+      res.json({ success: true, id });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to create resource" });
+    }
+  });
+
+  // Admin: Get all resources (for admin panel)
+  app.get("/api/admin/resources", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const section = req.query.section as string;
+      let query;
+      if (section) {
+        query = db.select().from(resources).where(eq(resources.section, section)).all();
+      } else {
+        query = db.select().from(resources).all();
+      }
+      res.json(query);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to fetch resources" });
     }
   });
 

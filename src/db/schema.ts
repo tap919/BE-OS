@@ -47,6 +47,34 @@ export const saved_resources = sqliteTable('saved_resources', {
   };
 });
 
+export const blockchain_credentials = sqliteTable('blockchain_credentials', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  issuer: text('issuer').notNull(),
+  date: text('date').notNull(),
+  hash: text('hash').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }),
+});
+
+export const blockchain_circles = sqliteTable('blockchain_circles', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  poolSize: text('pool_size').notNull(),
+  status: text('status').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }),
+});
+
+export const blockchain_grants = sqliteTable('blockchain_grants', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  amount: text('amount').notNull(),
+  status: text('status').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }),
+});
+
 export const user_stats = sqliteTable('user_stats', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),

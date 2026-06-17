@@ -6,7 +6,7 @@ import { Link, Fingerprint, Users, Banknote, Coins, Plus, ShieldCheck, Download,
 import { BrowserProvider, formatEther } from "ethers";
 
 export default function BlockchainIdentity() {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   
   const [walletConnected, setWalletConnected] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
@@ -14,23 +14,52 @@ export default function BlockchainIdentity() {
   const [credentials, setCredentials] = useState<any[]>([]);
   const [circles, setCircles] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
+  const [loadingDb, setLoadingDb] = useState(true);
 
   useEffect(() => {
     checkConnection();
-  }, []);
+    loadDbState();
+  }, [user, getToken]);
+
+  const loadDbState = async () => {
+    if (!user) return;
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch("/api/blockchain/state", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCredentials(data.credentials || []);
+        setCircles(data.circles || []);
+        setContracts(data.contracts || []);
+      }
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setLoadingDb(false);
+    }
+  };
 
   const checkConnection = async () => {
     if (window.ethereum) {
-      const provider = new BrowserProvider(window.ethereum);
-      const accounts = await provider.listAccounts();
-      if (accounts.length > 0) {
-        setAccount(accounts[0].address);
-        setWalletConnected(true);
-        const bal = await provider.getBalance(accounts[0].address);
-        setBalance(formatEther(bal));
+      try {
+        const provider = new BrowserProvider(window.ethereum);
+        const accounts = await provider.listAccounts();
+        if (accounts.length > 0) {
+          setAccount(accounts[0].address);
+          setWalletConnected(true);
+          const bal = await provider.getBalance(accounts[0].address);
+          setBalance(formatEther(bal));
+        }
+      } catch(err) {
+        console.error(err);
       }
     }
   };
+  
+// ... connecting wallet logic remains the same
 
   const connectWallet = async () => {
     if (window.ethereum) {
@@ -57,44 +86,77 @@ export default function BlockchainIdentity() {
     setBalance("0");
   };
 
-  const issueCredential = () => {
+  const issueCredential = async () => {
     if (!walletConnected) {
       alert("Please connect your wallet first.");
       return;
     }
-    setCredentials(prev => [...prev, {
-      id: Date.now(),
+    const newCred = {
       type: "Course Completion",
       issuer: "BE-OS Academy",
       date: new Date().toLocaleDateString(),
       hash: `0x${Math.random().toString(16).slice(2, 42)}`
-    }]);
+    };
+    
+    try {
+      const token = await getToken();
+      await fetch("/api/blockchain/credentials", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(newCred)
+      });
+      loadDbState();
+    } catch(err) {
+      console.error(err);
+    }
   };
 
-  const joinCircle = () => {
+  const joinCircle = async () => {
     if (!walletConnected) {
       alert("Please connect your wallet first.");
       return;
     }
-    setCircles(prev => [...prev, {
-      id: Date.now(),
+    const newCircle = {
       name: "Community Fund Delta",
       poolSize: "5.0 ETH",
       status: "Active"
-    }]);
+    };
+
+    try {
+      const token = await getToken();
+      await fetch("/api/blockchain/circles", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(newCircle)
+      });
+      loadDbState();
+    } catch(err) {
+      console.error(err);
+    }
   };
 
-  const applyGrant = () => {
+  const applyGrant = async () => {
     if (!walletConnected) {
       alert("Please connect your wallet first.");
       return;
     }
-    setContracts(prev => [...prev, {
-      id: Date.now(),
+    const newGrant = {
       name: "Minority Business Grant 2026",
       amount: "2.5 ETH",
       status: "Under Review"
-    }]);
+    };
+
+    try {
+      const token = await getToken();
+      await fetch("/api/blockchain/grants", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(newGrant)
+      });
+      loadDbState();
+    } catch(err) {
+      console.error(err);
+    }
   };
 
   // Derive score from balance and verified credentials
