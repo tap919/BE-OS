@@ -17,6 +17,38 @@ export function AICoach({ title, description, context, placeholder = "Ask me any
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const handleSaveToVault = async () => {
+    if (!response) return;
+    setIsSaving(true);
+    setSaveSuccess(false);
+
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/vault/ai-snippets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ snippet: response, contextName: title }),
+      });
+
+      if (res.ok) {
+        setSaveSuccess(true);
+      } else {
+        alert("Failed to save to vault");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save to vault");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -24,6 +56,7 @@ export function AICoach({ title, description, context, placeholder = "Ask me any
     setIsLoading(true);
     setError(null);
     setResponse(null);
+    setSaveSuccess(false);
 
     try {
       const token = await getToken();
@@ -139,7 +172,13 @@ export function AICoach({ title, description, context, placeholder = "Ask me any
                 </div>
                 <div className="mt-4 flex justify-between items-center pt-4 border-t border-slate-700/50">
                   <span className="text-xs text-slate-500 font-medium tracking-wider uppercase">AI Generated</span>
-                  <button className="text-xs font-bold text-amber-500 hover:text-amber-400">Save to Vault</button>
+                  <button 
+                    onClick={handleSaveToVault} 
+                    disabled={isSaving || saveSuccess}
+                    className="text-xs font-bold text-amber-500 hover:text-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? "Saving..." : saveSuccess ? "Saved!" : "Save to Vault"}
+                  </button>
                 </div>
               </div>
             )}

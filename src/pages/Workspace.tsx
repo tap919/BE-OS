@@ -154,9 +154,9 @@ export default function WorkspaceHub() {
 
       <h2 className="text-xl font-bold text-slate-900 mb-2 mt-4">Workspace Actions</h2>
       <Grid>
-        <Card title="Start Google Meet" description="Generate a secure video link for networking meetings." icon={Video} />
-        <Card title="Create Business Doc" description="Draft a new Google Doc using AI coach templates." icon={FileText} />
-        <Card title="Sync Contacts" description="Import and verify contacts from your Google network." icon={Users} />
+        <a href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer" className="block"><Card title="Start Google Meet" description="Generate a secure video link for networking meetings." icon={Video} /></a>
+        <a href="https://docs.google.com/document/create" target="_blank" rel="noopener noreferrer" className="block"><Card title="Create Business Doc" description="Draft a new Google Doc using AI coach templates." icon={FileText} /></a>
+        <a href="https://contacts.google.com/" target="_blank" rel="noopener noreferrer" className="block"><Card title="Sync Contacts" description="Import and verify contacts from your Google network." icon={Users} /></a>
       </Grid>
     </div>
   );

@@ -46,3 +46,15 @@ export const saved_resources = sqliteTable('saved_resources', {
     unq: unique().on(table.userId, table.resourceId),
   };
 });
+
+export const user_stats = sqliteTable('user_stats', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  section: text('section').notNull(), // 'fair_housing', 'community', 'business', 'legal', etc.
+  interactions: integer('interactions').default(0).notNull(),
+  lastActive: integer('last_active', { mode: 'timestamp' }),
+}, (table) => {
+  return {
+    unq: unique().on(table.userId, table.section),
+  };
+});

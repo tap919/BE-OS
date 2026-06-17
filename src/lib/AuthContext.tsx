@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { User, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 
@@ -20,26 +20,19 @@ const AuthContext = createContext<AuthContextType>({
   getOAuthToken: () => null,
 });
 
-// Cache the Google OAuth access token in-memory (never in localStorage)
-let cachedAccessToken: string | null = null;
-let isSigningIn = false;
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const cachedAccessTokenRef = useRef<string | null>(null);
+  const isSigningInRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        if (!isSigningIn && !cachedAccessToken) {
-          // If we reloaded the page, the user is authenticated with Firebase, 
-          // but we lost the in-memory OAuth token.
-          // They might need to sign in again if they want to hit Workspace APIs.
-        }
       } else {
         setUser(null);
-        cachedAccessToken = null;
+        cachedAccessTokenRef.current = null;
       }
       setLoading(false);
     });
@@ -57,24 +50,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     provider.addScope("https://www.googleapis.com/auth/meetings.space.created");
 
     try {
-      isSigningIn = true;
+      isSigningInRef.current = true;
       const result = await signInWithPopup(auth, provider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
-        cachedAccessToken = credential.accessToken;
+        cachedAccessTokenRef.current = credential.accessToken;
       }
       setUser(result.user);
     } catch (error) {
       console.error("Error signing in with Google", error);
     } finally {
-      isSigningIn = false;
+      isSigningInRef.current = false;
     }
   };
 
   const logout = async () => {
     try {
       await signOut(auth);
-      cachedAccessToken = null;
+      cachedAccessTokenRef.current = null;
     } catch (error) {
       console.error("Error signing out", error);
     }
@@ -86,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getOAuthToken = () => {
-    return cachedAccessToken;
+    return cachedAccessTokenRef.current;
   };
 
   return (
