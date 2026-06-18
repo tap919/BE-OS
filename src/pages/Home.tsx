@@ -5,57 +5,81 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const navigate = useNavigate();
   const [showWizard, setShowWizard] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
+  const [wizardAnswers, setWizardAnswers] = useState<string[]>([]);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   const wizardSteps = [
     {
       question: "What is your primary goal today?",
-      options: [
-         { label: "Build Wealth & Credit", route: "/financial-literacy" },
-         { label: "Start/Grow a Business", route: "/business-builder" },
-         { label: "Understand Housing Rights", route: "/fair-housing" },
-         { label: "Find Legal Support", route: "/legal-empowerment" },
-      ]
+      options: ["Build Wealth & Credit", "Start/Grow a Business", "Understand Housing Rights", "Find Legal Support"]
     },
     {
-      question: "How much time do you have right now?",
-      options: [
-         { label: "Just 5 minutes (Quick Actions)", next: true },
-         { label: "15+ minutes (Deep Dive & Docs)", next: true },
-         { label: "I need immediate AI assistance", next: true }
-      ]
+      question: "What best describes your current stage?",
+      options: ["Just getting started", "Have some foundations, looking to grow", "Facing a specific challenge or crisis", "Looking to invest/give back"]
+    },
+    {
+      question: "How do you prefer to learn or take action?",
+      options: ["Step-by-step interactive wizards", "Reading comprehensive guides", "Talking to an AI Assistant", "Finding real human professionals"]
     },
     {
       question: "Are you working independently or with a community?",
-      options: [
-         { label: "Solo founder/individual", next: true },
-         { label: "With partners / co-founders", next: true },
-         { label: "Looking for a community circle", route: "/blockchain-identity" }
-      ]
+      options: ["Solo founder/individual", "With partners / co-founders", "Actively looking for a community circle"]
     },
     {
-      question: "Great. Should we save your progress to the Vault?",
-      options: [
-         { label: "Yes, track my stats securely", route: "/user-account" },
-         { label: "Not right now", route: "/tools" }
-      ]
+      question: "How much time do you have to spend right now?",
+      options: ["Just 5 minutes (Quick Actions)", "15-30 minutes (Deep Dive)", "I have time for a full planning session"]
+    },
+    {
+      question: "Should we generate your custom action plan and save it to your Vault?",
+      options: ["Yes, generate and save securely", "Skip saving, just show me the tools"]
     }
   ];
 
-  const handleWizardChoice = (option: any) => {
-    if (option.route && docRoute(option.route)) return;
+  const handleWizardChoice = async (optionLabel: string) => {
+    const newAnswers = [...wizardAnswers, optionLabel];
+    setWizardAnswers(newAnswers);
+
     if (wizardStep < wizardSteps.length - 1) {
       setWizardStep(prev => prev + 1);
-    }
-  };
+    } else {
+      // Final step
+      const shouldSave = optionLabel.includes("save securely");
+      setIsFinishing(true);
+      
+      if (shouldSave && user) {
+        try {
+          const token = await getToken();
+          await fetch("/api/vault/ai-snippets", {
+            method: "POST",
+            headers: { 
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              snippet: `Onboarding Profile: \nGoal: ${newAnswers[0]}\nStage: ${newAnswers[1]}\nStyle: ${newAnswers[2]}\nNetwork: ${newAnswers[3]}\nTime: ${newAnswers[4]}`
+            })
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
 
-  const docRoute = (path: string) => {
-    setShowWizard(false);
-    navigate(path);
-    return true;
+      setTimeout(() => {
+        setIsFinishing(false);
+        setShowWizard(false);
+        
+        // Route based on goal
+        const goal = newAnswers[0];
+        if (goal.includes("Business")) navigate("/business");
+        else if (goal.includes("Housing")) navigate("/fair-housing");
+        else if (goal.includes("Legal")) navigate("/legal");
+        else navigate("/financial-literacy");
+      }, 1500);
+    }
   };
 
   return (
@@ -115,16 +139,23 @@ export default function Home() {
                 </h3>
                 
                 <div className="space-y-3">
-                  {wizardSteps[wizardStep].options.map((opt, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => handleWizardChoice(opt)}
-                      className="w-full text-left p-4 rounded-xl border-2 border-slate-100 hover:border-indigo-600 hover:bg-indigo-50 font-medium text-slate-700 transition flex justify-between items-center group"
-                    >
-                      {opt.label}
-                      <ArrowRight className="w-4 h-4 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
-                  ))}
+                  {isFinishing ? (
+                    <div className="text-center py-12">
+                       <Compass className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
+                       <h3 className="font-bold text-lg text-slate-900">Personalizing your path...</h3>
+                    </div>
+                  ) : (
+                    wizardSteps[wizardStep].options.map((opt, idx) => (
+                      <button 
+                        key={idx}
+                        onClick={() => handleWizardChoice(opt)}
+                        className="w-full text-left p-4 rounded-xl border-2 border-slate-100 hover:border-indigo-600 hover:bg-indigo-50 font-medium text-slate-700 transition flex justify-between items-center group"
+                      >
+                        {opt}
+                        <ArrowRight className="w-4 h-4 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    ))
+                  )}
                 </div>
              </div>
           </div>

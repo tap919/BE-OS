@@ -3,6 +3,7 @@ import { useAuth } from "@/src/lib/AuthContext";
 import { SectionHeader } from "@/src/components/ui/LayoutBlocks";
 import { ResourceList, type Resource } from "@/src/components/ui/ResourceList";
 import { AICoach } from "@/src/components/ui/AICoach";
+import { LegalQuickActions } from "@/src/features/legal-defense/components/LegalQuickActions";
 
 export default function LegalEmpowerment() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -40,6 +41,8 @@ export default function LegalEmpowerment() {
         title="Criminal Justice & Legal Empowerment Hub" 
         description="Equipping communities with legal knowledge, rights education, and systemic advocacy resources." 
       />
+
+      <LegalQuickActions />
 
       <section>
         <AICoach 

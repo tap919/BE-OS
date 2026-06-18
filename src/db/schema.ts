@@ -14,18 +14,6 @@ export const resources = sqliteTable('resources', {
   };
 });
 
-export const tools = sqliteTable('tools', {
-  id: text('id').primaryKey(),
-  section: text('section').notNull(),
-  name: text('name').notNull(),
-  slug: text('slug').notNull().unique(),
-  config: text('config', { mode: 'json' }),
-}, (table) => {
-  return {
-    sectionIdx: index('tools_section_idx').on(table.section)
-  };
-});
-
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),

@@ -3,7 +3,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /resources/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -27,12 +27,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isSigningInRef = useRef(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    // Restore cached oauth token from session storage if it exists
+    const storedOauthToken = sessionStorage.getItem("google_oauth_token");
+    if (storedOauthToken) {
+      cachedAccessTokenRef.current = storedOauthToken;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+        // Sync user to SQLite DB
+        try {
+          const token = await currentUser.getIdToken();
+          await fetch("/api/users/sync", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+        } catch (err) {
+          console.error("Failed to sync user to database:", err);
+        }
       } else {
         setUser(null);
         cachedAccessTokenRef.current = null;
+        sessionStorage.removeItem("google_oauth_token");
       }
       setLoading(false);
     });
@@ -55,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         cachedAccessTokenRef.current = credential.accessToken;
+        sessionStorage.setItem("google_oauth_token", credential.accessToken);
       }
       setUser(result.user);
     } catch (error) {

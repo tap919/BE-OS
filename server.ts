@@ -175,6 +175,24 @@ async function startServer() {
     }
   });
 
+  // User Sync
+  app.post("/api/users/sync", requireAuth, async (req, res) => {
+    try {
+      const uid = (req as any).user.uid;
+      const email = (req as any).user.email || "";
+      db.insert(users).values({
+        id: uid,
+        email: email,
+        role: "user",
+        createdAt: new Date()
+      }).onConflictDoNothing().run();
+      res.json({ success: true });
+    } catch(err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to sync user" });
+    }
+  });
+
   // Vault / Saved Resources API
   
   // 1. Get saved resources
