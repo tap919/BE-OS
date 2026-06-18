@@ -86,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signOut(auth);
       cachedAccessTokenRef.current = null;
+      sessionStorage.removeItem("google_oauth_token");
     } catch (error) {
       console.error("Error signing out", error);
     }

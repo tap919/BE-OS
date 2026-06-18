@@ -141,7 +141,78 @@ export function LegalQuickActions() {
       }
     }
     
-    // Fallbacks for the other two 
+    if (activeAction.id === "tenant") {
+      if (step === 0) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">What state are you renting in?</label>
+            <select className="w-full p-3 border border-slate-300 rounded-lg">
+              <option>New York</option>
+              <option>California</option>
+              <option>Texas</option>
+              <option>Georgia</option>
+            </select>
+          </div>
+        );
+      }
+      if (step === 1) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">What kind of notice did you receive?</label>
+            <select className="w-full p-3 border border-slate-300 rounded-lg">
+              <option>Pay Rent or Quit</option>
+              <option>Cure or Quit (Lease Violation)</option>
+              <option>Unconditional Quit</option>
+              <option>Rent Increase Notice</option>
+            </select>
+          </div>
+        );
+      }
+      if (step === 2) {
+         return (
+           <div className="text-center py-4">
+             <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
+             <h3 className="font-bold text-slate-800">Response Generated</h3>
+             <p className="text-sm text-slate-500 mb-4">A standard legal response letter has been generated in your Vault.</p>
+           </div>
+         );
+      }
+    }
+
+    if (activeAction.id === "search") {
+      if (step === 0) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">Enter keywords (e.g., "wrongful termination", "tenant rights")</label>
+            <input type="text" className="w-full p-3 border border-slate-300 rounded-lg" placeholder="Enter keywords..." />
+          </div>
+        );
+      }
+      if (step === 1) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">Filter by Jurisdiction</label>
+            <select className="w-full p-3 border border-slate-300 rounded-lg">
+              <option>Federal Supreme Court</option>
+              <option>Federal Circuit Court</option>
+              <option>State Supreme Court</option>
+            </select>
+          </div>
+        );
+      }
+      if (step === 2) {
+         return (
+           <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-900">
+             <h4 className="font-bold mb-2">Search Results:</h4>
+             <ul className="list-disc pl-5 space-y-2">
+               <li><span className="font-bold">Smith v. Doe (2018):</span> Established precedent for...</li>
+               <li><span className="font-bold">State v. Johnson (2020):</span> Clarified the meaning of...</li>
+             </ul>
+           </div>
+         );
+      }
+    }
+
     return (
       <div className="text-center py-6">
          <Search className="w-10 h-10 text-indigo-300 mx-auto mb-4" />

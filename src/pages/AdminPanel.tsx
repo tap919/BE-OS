@@ -129,6 +129,7 @@ function ResourceEditor() {
   const [resources, setResources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ title: "", url: "", description: "", section: "financial_literacy" });
   const { getToken } = useAuth();
   
@@ -157,8 +158,11 @@ function ResourceEditor() {
   const handleSave = async () => {
     try {
       const token = await getToken();
-      await fetch("/api/admin/resources", {
-        method: "POST",
+      const method = editId ? "PUT" : "POST";
+      const url = editId ? `/api/admin/resources/${editId}` : "/api/admin/resources";
+      
+      await fetch(url, {
+        method,
         headers: { 
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -166,12 +170,30 @@ function ResourceEditor() {
         body: JSON.stringify(formData)
       });
       setIsAdding(false);
+      setEditId(null);
       setFormData({ title: "", url: "", description: "", section: "financial_literacy" });
       fetchResources();
     } catch(err) {
       console.error(err);
       alert("Failed to save resource");
     }
+  };
+
+  const startEdit = (r: any) => {
+    setEditId(r.id);
+    setFormData({
+      title: r.title,
+      url: r.url,
+      description: r.description || "",
+      section: r.section
+    });
+    setIsAdding(true);
+  };
+
+  const cancelEdit = () => {
+    setIsAdding(false);
+    setEditId(null);
+    setFormData({ title: "", url: "", description: "", section: "financial_literacy" });
   };
 
   return (
@@ -182,7 +204,7 @@ function ResourceEditor() {
           Content Resource Database
         </h3>
         <button 
-          onClick={() => setIsAdding(!isAdding)}
+          onClick={() => { if(isAdding) cancelEdit(); else setIsAdding(true); }}
           className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg text-sm flex items-center gap-2"
         >
           {isAdding ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -192,7 +214,7 @@ function ResourceEditor() {
 
       {isAdding && (
         <div className="bg-slate-800 p-4 rounded-xl mb-6 border border-amber-500/30">
-          <h4 className="font-bold text-white mb-4">Add New Resource</h4>
+          <h4 className="font-bold text-white mb-4">{editId ? "Edit Resource" : "Add New Resource"}</h4>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <input type="text" placeholder="Title" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
             <input type="text" placeholder="URL" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
@@ -226,11 +248,11 @@ function ResourceEditor() {
                 <h4 className="font-bold text-white text-sm">[{r.section.toUpperCase()}] {r.title}</h4>
                 <p className="text-xs text-slate-400 font-mono">{r.url}</p>
               </div>
-              <button disabled className="text-xs px-2 py-1 bg-slate-700/50 text-slate-400 rounded cursor-not-allowed">Edit (Coming Soon)</button>
+              <button onClick={() => startEdit(r)} className="text-xs px-3 py-1.5 bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 rounded transition-colors">Edit</button>
             </div>
           ))}
           <p className="text-xs tracking-wider uppercase text-slate-500 mt-4 pt-4 border-t border-slate-800 text-center">
-            Showing up to 50 rows (Edit functionality upcoming)
+            Showing up to 50 rows
           </p>
         </div>
       )}

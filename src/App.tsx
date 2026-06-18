@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Layout } from "@/src/components/layout/Layout";
 import { AuthProvider } from "@/src/lib/AuthContext";
@@ -17,6 +18,7 @@ import BlockchainIdentity from "@/src/pages/BlockchainIdentity";
 import CommunityCulturePage from "@/src/features/community-culture/CommunityCulturePage";
 import UserAccount from "@/src/pages/UserAccount";
 import AdminPanel from "@/src/pages/AdminPanel";
+import ToolView from "@/src/pages/ToolView";
 
 import WorkspaceHub from "@/src/pages/Workspace";
 
@@ -33,6 +35,7 @@ export default function App() {
             <Route path="/business" element={<BusinessBuilderPage />} />
             <Route path="/legal" element={<LegalEmpowerment />} />
             <Route path="/tools" element={<ToolsAgents />} />
+            <Route path="/tools/:toolId" element={<ToolView />} />
             <Route path="/workspace" element={<WorkspaceHub />} />
             <Route path="/blockchain" element={<BlockchainIdentity />} />
             <Route path="/community" element={<CommunityCulturePage />} />

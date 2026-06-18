@@ -3,6 +3,7 @@ import { useAuth } from "@/src/lib/AuthContext";
 import { SectionHeader } from "@/src/components/ui/LayoutBlocks";
 import { ResourceList, type Resource } from "@/src/components/ui/ResourceList";
 import { AICoach } from "@/src/components/ui/AICoach";
+import { FinancialQuickActions } from "@/src/features/financial-literacy/components/FinancialQuickActions";
 
 export default function FinancialLiteracy() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -49,6 +50,14 @@ export default function FinancialLiteracy() {
           context="financial budgeting, credit building, and debt management"
           placeholder="How do I start an emergency fund?"
         />
+      </section>
+
+      <section>
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Quick Actions</h2>
+          <p className="text-sm text-slate-500 mt-1">Foundational financial tasks you can complete right now.</p>
+        </div>
+        <FinancialQuickActions />
       </section>
 
       <section>

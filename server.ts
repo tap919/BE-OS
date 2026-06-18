@@ -114,7 +114,7 @@ async function startServer() {
     message: { error: "Too many AI requests, please slow down." },
     validate: { xForwardedForHeader: false },
     keyGenerator: (req) => {
-      return (req as any).user?.uid || req.ip || "unknown";
+      return (req as any).user?.uid || "unknown";
     }
   });
 
@@ -438,6 +438,26 @@ async function startServer() {
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Failed to create resource" });
+    }
+  });
+
+  // Admin: Update Resource
+  app.put("/api/admin/resources/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, description, url, section, type, tags } = req.body;
+      db.update(resources).set({
+        section,
+        title,
+        description,
+        url,
+        type: type || "article",
+        tags: tags || []
+      }).where(eq(resources.id, id)).run();
+      res.json({ success: true, id });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to update resource" });
     }
   });
 
