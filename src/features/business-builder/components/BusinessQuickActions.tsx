@@ -41,10 +41,54 @@ export function BusinessQuickActions() {
   
   const activeAction = actions.find(a => a.id === activeActionId);
 
-  const openAction = (id: string) => {
+  const openAction = async (id: string) => {
     setActiveActionId(id);
     setStep(0);
     setFormData({});
+    
+    try {
+      const token = await getToken();
+      if (token) {
+        // Log the interaction
+        fetch("/api/stats/business", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` }
+        }).catch(e => console.error(e));
+
+        // Fetch progress and resume if available
+        const res = await fetch("/api/progress", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const allProgress = await res.json();
+          const prog = allProgress.find((p: any) => p.module === 'business' && p.actionId === id);
+          if (prog && prog.status !== 'completed') {
+            setStep(prog.stepReached || 0);
+            if (prog.savedData) {
+               setFormData(prog.savedData);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const saveProgress = async (status: 'started' | 'completed', currentStep: number) => {
+    if (!activeActionId) return;
+    try {
+      const token = await getToken();
+      if (token) {
+        await fetch(`/api/progress/business/${activeActionId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ status, stepReached: currentStep, savedData: formData })
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save progress', e);
+    }
   };
 
   const closeAction = () => {
@@ -55,8 +99,17 @@ export function BusinessQuickActions() {
 
   const nextStep = () => {
     if (activeAction && step < activeAction.steps.length - 1) {
-      setStep(step + 1);
+      const next = step + 1;
+      setStep(next);
+      saveProgress('started', next);
     }
+  };
+
+  const handleDone = () => {
+    if (activeAction) {
+      saveProgress('completed', activeAction.steps.length - 1);
+    }
+    closeAction();
   };
 
   const prevStep = () => {
@@ -77,7 +130,7 @@ export function BusinessQuickActions() {
         body: JSON.stringify({ snippet, contextName }),
       });
       alert("Successfully saved to your vault!");
-      closeAction();
+      handleDone();
     } catch(err) {
       alert("Failed to save.");
     }
@@ -292,7 +345,7 @@ export function BusinessQuickActions() {
             <h3 className="font-bold text-slate-800 text-xl">Strategy Drafted</h3>
             <p className="text-sm text-slate-500">Your personalized growth plan has been sent to your Vault.</p>
             <button 
-              onClick={() => closeAction()}
+              onClick={() => handleDone()}
               className="w-full p-3 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 mt-4"
             >
               Finish

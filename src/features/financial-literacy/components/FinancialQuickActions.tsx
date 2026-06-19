@@ -38,12 +38,14 @@ export function FinancialQuickActions() {
   const [step, setStep] = useState(0);
   const [income, setIncome] = useState<string>("4000");
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { getToken } = useAuth();
 
   const openAction = async (id: string) => {
     setActiveActionId(id);
     setStep(0);
     setFormData({});
+    setErrorMsg(null);
     
     try {
       const token = await getToken();
@@ -80,14 +82,18 @@ export function FinancialQuickActions() {
     try {
       const token = await getToken();
       if (token) {
-        await fetch(`/api/progress/financial/${activeActionId}`, {
+        const res = await fetch(`/api/progress/financial/${activeActionId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ status, stepReached: currentStep, savedData: { ...formData, income } })
         });
+        if (!res.ok) {
+          setErrorMsg("Failed to save progress. Please try again.");
+        }
       }
     } catch (e) {
       console.error('Failed to save progress', e);
+      setErrorMsg("Failed to save progress. Please try again.");
     }
   };
 
@@ -348,6 +354,11 @@ export function FinancialQuickActions() {
               </div>
 
               <div className="min-h-[150px]">
+                {errorMsg && (
+                  <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm font-medium">
+                    {errorMsg}
+                  </div>
+                )}
                 {renderStepContent()}
               </div>
 

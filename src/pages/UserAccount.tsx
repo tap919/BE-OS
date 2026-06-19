@@ -12,6 +12,25 @@ export default function UserAccount() {
   const [progress, setProgress] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const ACTION_NAMES: Record<string, string> = {
+    budgeting: "50/30/20 Budgeting",
+    debt: "Debt Payoff Plan",
+    emergency: "Emergency Fund Setup",
+    investing: "Investment Goals",
+    pitch: "Pitch Deck Review",
+    grant: "Grant Finder",
+    cdfi: "CDFI Locator",
+    investor: "Investor Match",
+    expungement: "Clear Your Record",
+    defense: "Know Your Rights",
+    tenant: "Tenant Defense",
+    search: "Case Law Search",
+    llc: "Start your LLC",
+    docs: "Build core documents",
+    funding: "Find funding",
+    grow: "Grow strategically"
+  };
+
   useEffect(() => {
     async function fetchData() {
       if (!user) return;
@@ -148,7 +167,10 @@ export default function UserAccount() {
               Module Progress
             </h2>
             {loading ? (
-              <div className="text-slate-400">Loading progress...</div>
+              <div className="space-y-4 animate-pulse">
+                <div className="h-20 bg-slate-800 rounded-xl"></div>
+                <div className="h-20 bg-slate-800 rounded-xl"></div>
+              </div>
             ) : progress.length === 0 ? (
               <p className="text-slate-400">Complete tools to see your progress here.</p>
             ) : (
@@ -166,7 +188,7 @@ export default function UserAccount() {
                     <div className="space-y-2">
                        {items.map((item: any) => (
                          <div key={item.actionId} className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-slate-400 capitalize">{item.actionId}</span>
+                            <span className="text-sm font-medium text-slate-400">{ACTION_NAMES[item.actionId] || item.actionId}</span>
                             {item.status === 'completed' ? (
                                <span className="text-xs font-bold bg-green-500/20 text-green-400 px-2 py-1 rounded">Completed</span>
                             ) : (

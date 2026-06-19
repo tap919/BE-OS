@@ -107,6 +107,9 @@ async function startServer() {
   // --- API Routes ---
 
   // Health check
+  app.get("/health", (req, res) => {
+    res.json({ ok: true, status: "healthy" });
+  });
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
   });
@@ -367,6 +370,18 @@ async function startServer() {
       const uid = (req as any).user.uid;
       const { module, actionId } = req.params;
       const { status, stepReached, savedData } = req.body;
+
+      // Basic input sanitization
+      if (savedData && (typeof savedData !== 'object' || Array.isArray(savedData))) {
+        return res.status(400).json({ error: "Invalid savedData format. Must be a JSON object." });
+      }
+      if (savedData && JSON.stringify(savedData).length > 8000) {
+        return res.status(400).json({ error: "Payload too large." });
+      }
+      if (status !== 'started' && status !== 'completed') {
+        return res.status(400).json({ error: "Invalid status." });
+      }
+
       db.insert(module_progress).values({
         id: crypto.randomUUID(),
         userId: uid, 

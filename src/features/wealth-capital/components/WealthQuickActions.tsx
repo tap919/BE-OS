@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { DollarSign, Landmark, Presentation, Briefcase, X, CheckCircle } from "lucide-react";
+import { useAuth } from "@/src/lib/AuthContext";
 
 const actions = [
   {
@@ -35,18 +36,78 @@ const actions = [
 export function WealthQuickActions() {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
-
-  const openAction = (id: string) => {
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const { getToken } = useAuth();
+  
+  const openAction = async (id: string) => {
     setActiveActionId(id);
     setStep(0);
+    setFormData({});
+    
+    try {
+      const token = await getToken();
+      if (token) {
+        // Log the interaction
+        fetch("/api/stats/wealth", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` }
+        }).catch(e => console.error(e));
+
+        // Fetch progress and resume if available
+        const res = await fetch("/api/progress", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const allProgress = await res.json();
+          const prog = allProgress.find((p: any) => p.module === 'wealth' && p.actionId === id);
+          if (prog && prog.status !== 'completed') {
+            setStep(prog.stepReached || 0);
+            if (prog.savedData) {
+               setFormData(prog.savedData);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const saveProgress = async (status: 'started' | 'completed', currentStep: number) => {
+    if (!activeActionId) return;
+    try {
+      const token = await getToken();
+      if (token) {
+        await fetch(`/api/progress/wealth/${activeActionId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ status, stepReached: currentStep, savedData: formData })
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save progress', e);
+    }
   };
 
   const closeAction = () => {
     setActiveActionId(null);
     setStep(0);
+    setFormData({});
   };
 
-  const nextStep = () => setStep((s) => s + 1);
+  const nextStep = () => {
+    const next = step + 1;
+    setStep(next);
+    saveProgress('started', next);
+  };
+
+  const handleDone = () => {
+    if (activeAction) {
+      saveProgress('completed', activeAction.steps.length - 1);
+    }
+    closeAction();
+  };
+
   const activeAction = actions.find(a => a.id === activeActionId);
 
   const renderStepContent = () => {
@@ -250,7 +311,7 @@ export function WealthQuickActions() {
                   </button>
                 ) : (
                   <button 
-                    onClick={closeAction}
+                    onClick={handleDone}
                     className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium"
                   >
                     Done

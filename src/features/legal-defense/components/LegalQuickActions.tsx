@@ -36,32 +36,77 @@ const actions = [
 export function LegalQuickActions() {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
+  const [formData, setFormData] = useState<Record<string, any>>({});
   const { getToken } = useAuth();
 
   const openAction = async (id: string) => {
     setActiveActionId(id);
     setStep(0);
+    setFormData({});
     
-    // Log the interaction
     try {
       const token = await getToken();
       if (token) {
-        await fetch("/api/stats/legal", {
+        // Log the interaction
+        fetch("/api/stats/legal", {
           method: "POST",
           headers: { "Authorization": `Bearer ${token}` }
+        }).catch(e => console.error(e));
+
+        // Fetch progress and resume if available
+        const res = await fetch("/api/progress", {
+          headers: { "Authorization": `Bearer ${token}` }
         });
+        if (res.ok) {
+          const allProgress = await res.json();
+          const prog = allProgress.find((p: any) => p.module === 'legal' && p.actionId === id);
+          if (prog && prog.status !== 'completed') {
+            setStep(prog.stepReached || 0);
+            if (prog.savedData) {
+               setFormData(prog.savedData);
+            }
+          }
+        }
       }
     } catch (e) {
       console.error(e);
     }
   };
 
+  const saveProgress = async (status: 'started' | 'completed', currentStep: number) => {
+    if (!activeActionId) return;
+    try {
+      const token = await getToken();
+      if (token) {
+        await fetch(`/api/progress/legal/${activeActionId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ status, stepReached: currentStep, savedData: formData })
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save progress', e);
+    }
+  };
+
   const closeAction = () => {
     setActiveActionId(null);
     setStep(0);
+    setFormData({});
   };
 
-  const nextStep = () => setStep((s) => s + 1);
+  const nextStep = () => {
+    const next = step + 1;
+    setStep(next);
+    saveProgress('started', next);
+  };
+
+  const handleDone = () => {
+    if (activeAction) {
+      saveProgress('completed', activeAction.steps.length - 1);
+    }
+    closeAction();
+  };
 
   const activeAction = actions.find(a => a.id === activeActionId);
 
@@ -282,7 +327,7 @@ export function LegalQuickActions() {
                     Continue &rarr;
                   </button>
                 ) : (
-                  <button onClick={closeAction} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+                  <button onClick={handleDone} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors">
                     Finish & Save
                   </button>
                 )}
