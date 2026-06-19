@@ -36,6 +36,7 @@ const actions = [
 export function FinancialQuickActions() {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
+  const [income, setIncome] = useState<string>("4000");
   const { getToken } = useAuth();
 
   const openAction = async (id: string) => {
@@ -75,27 +76,28 @@ export function FinancialQuickActions() {
             <label className="block text-sm font-medium text-slate-700">What is your monthly after-tax income?</label>
             <div className="relative">
               <span className="absolute left-3 top-3 text-slate-500">$</span>
-              <input type="number" placeholder="4000" className="w-full p-3 pl-8 border border-slate-300 rounded-lg" />
+              <input type="number" placeholder="4000" value={income} onChange={e => setIncome(e.target.value)} className="w-full p-3 pl-8 border border-slate-300 rounded-lg" />
             </div>
           </div>
         );
       }
       if (step === 1) {
+        const numIncome = parseFloat(income || "0");
         return (
           <div className="space-y-4">
             <h3 className="font-bold text-slate-800 text-lg">Your 50/30/20 Target Split</h3>
             <div className="space-y-2">
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
                 <div className="text-sm text-blue-800">Needs (50%)</div>
-                <div className="text-xl font-bold text-blue-900">$2,000</div>
+                <div className="text-xl font-bold text-blue-900">${(numIncome * 0.5).toFixed(2)}</div>
               </div>
               <div className="p-3 bg-purple-50 border border-purple-100 rounded-lg">
                 <div className="text-sm text-purple-800">Wants (30%)</div>
-                <div className="text-xl font-bold text-purple-900">$1,200</div>
+                <div className="text-xl font-bold text-purple-900">${(numIncome * 0.3).toFixed(2)}</div>
               </div>
               <div className="p-3 bg-green-50 border border-green-100 rounded-lg">
                 <div className="text-sm text-green-800">Savings & Debt (20%)</div>
-                <div className="text-xl font-bold text-green-900">$800</div>
+                <div className="text-xl font-bold text-green-900">${(numIncome * 0.2).toFixed(2)}</div>
               </div>
             </div>
           </div>

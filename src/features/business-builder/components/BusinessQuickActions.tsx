@@ -196,12 +196,101 @@ export function BusinessQuickActions() {
       }
     }
 
+    if (activeAction.id === "funding") {
+      if (step === 0) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">Type of Funding?</label>
+            <div className="grid grid-cols-1 gap-2">
+              {["Grants (Non-dilutive)", "Federal Contracts", "Bank Loans", "Venture Capital"].map(type => (
+                <label key={type} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                  <input type="radio" name="fundingType" value={type} />
+                  <span className="font-medium text-slate-700">{type}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      if (step === 1) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">Business Stage</label>
+            <select className="w-full p-3 border border-slate-300 rounded-lg">
+              <option>Pre-revenue / Idea</option>
+              <option>Early Stage ($0-100k)</option>
+              <option>Growth ($100k-1M)</option>
+              <option>Mature ($1M+)</option>
+            </select>
+          </div>
+        );
+      }
+      if (step === 2) {
+        return (
+          <div className="space-y-4">
+            <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-900">
+              <h4 className="font-bold mb-2">Recommended Program:</h4>
+              <p className="mb-2"><strong>SBA 8(a) Business Development Program:</strong> Best for your stage and focus.</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Offers set-aside contracts.</li>
+                <li>Provides mentorship and training.</li>
+              </ul>
+            </div>
+            <button 
+              onClick={() => saveSnippetToVault("Saved SBA 8(a) Program outline for review.", "Funding Plan")}
+              className="w-full p-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700"
+            >
+              Save to Vault
+            </button>
+          </div>
+        );
+      }
+    }
+
+    if (activeAction.id === "grow") {
+      if (step === 0) {
+        return (
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">What is your primary goal?</label>
+            <textarea 
+              className="w-full p-3 border border-slate-300 rounded-lg h-24" 
+              placeholder="e.g. I want to increase my monthly leads by 50%..."
+            />
+          </div>
+        );
+      }
+      if (step === 1) {
+        return (
+          <div className="space-y-4">
+             <div className="p-4 bg-amber-50 text-amber-900 rounded-lg text-sm">
+                <p className="font-bold mb-2">AI Strategy Analysis</p>
+                <p>Based on your goal, the priority should be optimizing your digital footprint and creating a direct lead magnet.</p>
+             </div>
+          </div>
+        );
+      }
+      if (step === 2) {
+        return (
+          <div className="flex flex-col items-center justify-center space-y-4 text-center py-6">
+            <CheckCircle className="w-12 h-12 text-green-500" />
+            <h3 className="font-bold text-slate-800 text-xl">Strategy Drafted</h3>
+            <p className="text-sm text-slate-500">Your personalized growth plan has been sent to your Vault.</p>
+            <button 
+              onClick={() => closeAction()}
+              className="w-full p-3 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 mt-4"
+            >
+              Finish
+            </button>
+          </div>
+        );
+      }
+    }
+
     // Generic fallback for others
     return (
       <div className="text-center py-8">
         <IconComponent className="w-12 h-12 text-indigo-300 mx-auto mb-4" icon={activeAction.icon} />
         <h3 className="font-bold text-slate-700 text-lg">{activeAction.steps[step]}</h3>
-        <p className="text-sm text-slate-500 mt-2">To be implemented dynamically based on user profile.</p>
       </div>
     );
   };

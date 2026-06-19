@@ -166,9 +166,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
           {children}
         </main>
+        
+        {/* Bottom Mobile Navigation */}
+        <nav className="lg:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around p-2 pb-safe z-40">
+          <Link to="/" className="flex flex-col items-center p-2 text-slate-500 hover:text-amber-600 transition-colors">
+            <Home className="w-5 h-5 mb-1" />
+            <span className="text-[10px] uppercase font-bold tracking-wider">Home</span>
+          </Link>
+          <Link to="/tools" className="flex flex-col items-center p-2 text-slate-500 hover:text-amber-600 transition-colors">
+            <BrainCircuit className="w-5 h-5 mb-1" />
+            <span className="text-[10px] uppercase font-bold tracking-wider">Tools</span>
+          </Link>
+          <Link to="/workspace" className="flex flex-col items-center p-2 text-slate-500 hover:text-amber-600 transition-colors">
+            <Cloud className="w-5 h-5 mb-1" />
+            <span className="text-[10px] uppercase font-bold tracking-wider">Vault</span>
+          </Link>
+          <Link to="/account" className="flex flex-col items-center p-2 text-slate-500 hover:text-amber-600 transition-colors">
+            <User className="w-5 h-5 mb-1" />
+            <span className="text-[10px] uppercase font-bold tracking-wider">Profile</span>
+          </Link>
+        </nav>
       </div>
     </div>
   );
