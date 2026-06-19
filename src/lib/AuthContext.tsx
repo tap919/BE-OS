@@ -75,8 +75,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.setItem("google_oauth_token", credential.accessToken);
       }
       setUser(result.user);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in with Google", error);
+      if (error.code === 'auth/network-request-failed') {
+        alert("Sign in failed due to a network error. If you are in an embedded preview, please pop out the app into a new tab using the button in the top right, or disable your adblocker/tracking protection.");
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // Ignored
+      } else {
+        alert(`Sign in error: ${error.message}`);
+      }
     } finally {
       isSigningInRef.current = false;
     }

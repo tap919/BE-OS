@@ -1,3 +1,34 @@
+CREATE TABLE `blockchain_circles` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`name` text NOT NULL,
+	`pool_size` text NOT NULL,
+	`status` text NOT NULL,
+	`created_at` integer,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `blockchain_credentials` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`type` text NOT NULL,
+	`issuer` text NOT NULL,
+	`date` text NOT NULL,
+	`hash` text NOT NULL,
+	`created_at` integer,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `blockchain_grants` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`name` text NOT NULL,
+	`amount` text NOT NULL,
+	`status` text NOT NULL,
+	`created_at` integer,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `resources` (
 	`id` text PRIMARY KEY NOT NULL,
 	`section` text NOT NULL,
@@ -21,16 +52,6 @@ CREATE TABLE `saved_resources` (
 CREATE INDEX `saved_resources_user_id_idx` ON `saved_resources` (`user_id`);--> statement-breakpoint
 CREATE INDEX `saved_resources_resource_id_idx` ON `saved_resources` (`resource_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `saved_resources_user_id_resource_id_unique` ON `saved_resources` (`user_id`,`resource_id`);--> statement-breakpoint
-CREATE TABLE `tools` (
-	`id` text PRIMARY KEY NOT NULL,
-	`section` text NOT NULL,
-	`name` text NOT NULL,
-	`slug` text NOT NULL,
-	`config` text
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `tools_slug_unique` ON `tools` (`slug`);--> statement-breakpoint
-CREATE INDEX `tools_section_idx` ON `tools` (`section`);--> statement-breakpoint
 CREATE TABLE `user_stats` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,

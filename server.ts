@@ -5,6 +5,7 @@ import { GoogleGenAI } from "@google/genai";
 import { db } from "./src/db";
 import { resources, users, saved_resources, user_stats, blockchain_credentials, blockchain_circles, blockchain_grants } from "./src/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import crypto from "crypto";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -18,6 +19,9 @@ const adminApp = initializeApp({ projectId: firebaseConfig.projectId });
 const auth = getAuth(adminApp);
 
 async function startServer() {
+  migrate(db, { migrationsFolder: path.join(process.cwd(), 'src/db/migrations') });
+  console.log('DB migrations applied.');
+
   const app = express();
   const PORT = 3000;
 
