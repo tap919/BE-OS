@@ -74,3 +74,19 @@ export const user_stats = sqliteTable('user_stats', {
     unq: unique().on(table.userId, table.section),
   };
 });
+
+export const module_progress = sqliteTable('module_progress', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  module: text('module').notNull(),      // e.g. "financial", "business", "legal"
+  actionId: text('action_id').notNull(), // e.g. "budget", "debt", "pitch", "grant"
+  status: text('status').notNull(),      // "started" | "completed"
+  stepReached: integer('step_reached').default(0),
+  savedData: text('saved_data', { mode: 'json' }).$type<Record<string, any>>(),
+  completedAt: integer('completed_at', { mode: 'timestamp' }),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }),
+}, (table) => {
+  return {
+    unq: unique().on(table.userId, table.module, table.actionId),
+  };
+});

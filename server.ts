@@ -3,7 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { db } from "./src/db";
-import { resources, users, saved_resources, user_stats, blockchain_credentials, blockchain_circles, blockchain_grants } from "./src/db/schema";
+import { resources, users, saved_resources, user_stats, blockchain_credentials, blockchain_circles, blockchain_grants, module_progress } from "./src/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import crypto from "crypto";
@@ -358,6 +358,51 @@ async function startServer() {
     } catch(err) {
       console.error(err);
       res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  // 7. Save module progress
+  app.post("/api/progress/:module/:actionId", requireAuth, async (req, res) => {
+    try {
+      const uid = (req as any).user.uid;
+      const { module, actionId } = req.params;
+      const { status, stepReached, savedData } = req.body;
+      db.insert(module_progress).values({
+        id: crypto.randomUUID(),
+        userId: uid, 
+        module, 
+        actionId,
+        status, 
+        stepReached: stepReached ?? 0,
+        savedData: savedData ?? {},
+        completedAt: status === 'completed' ? new Date() : null,
+        updatedAt: new Date()
+      }).onConflictDoUpdate({
+        target: [module_progress.userId, module_progress.module, module_progress.actionId],
+        set: { 
+          status, 
+          stepReached, 
+          savedData, 
+          updatedAt: new Date(),
+          completedAt: status === 'completed' ? new Date() : undefined 
+        }
+      }).run();
+      res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to save progress" });
+    }
+  });
+
+  // 8. Fetch all progress
+  app.get("/api/progress", requireAuth, async (req, res) => {
+    try {
+      const uid = (req as any).user.uid;
+      const data = db.select().from(module_progress).where(eq(module_progress.userId, uid)).all();
+      res.json(data);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to fetch progress" });
     }
   });
 

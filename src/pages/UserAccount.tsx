@@ -1,5 +1,5 @@
 import { SectionHeader, Grid, Card } from "@/src/components/ui/LayoutBlocks";
-import { LayoutDashboard, Bookmark, WalletCards, FolderClosed, Bell, Settings, ExternalLink, ArrowRight, BarChart2 } from "lucide-react";
+import { LayoutDashboard, Bookmark, WalletCards, FolderClosed, Bell, Settings, ExternalLink, ArrowRight, BarChart2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/src/lib/AuthContext";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -9,6 +9,7 @@ export default function UserAccount() {
   const { user, getToken } = useAuth();
   const [savedResources, setSavedResources] = useState<any[]>([]);
   const [stats, setStats] = useState<any[]>([]);
+  const [progress, setProgress] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,6 +40,15 @@ export default function UserAccount() {
             interactions: s.interactions
           }));
           setStats(formattedStats);
+        }
+
+        // Fetch progress
+        const resProgress = await fetch("/api/progress", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resProgress.ok) {
+          const progData = await resProgress.json();
+          setProgress(progData);
         }
       } catch (err) {
         console.error("Failed to fetch data", err);
@@ -128,6 +138,45 @@ export default function UserAccount() {
                     <Bar dataKey="interactions" fill="#6366f1" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800">
+            <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
+              <CheckCircle className="text-green-400 h-6 w-6" />
+              Module Progress
+            </h2>
+            {loading ? (
+              <div className="text-slate-400">Loading progress...</div>
+            ) : progress.length === 0 ? (
+              <p className="text-slate-400">Complete tools to see your progress here.</p>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(
+                  progress.reduce((acc: any, p: any) => {
+                    const mod = p.module;
+                    if (!acc[mod]) acc[mod] = [];
+                    acc[mod].push(p);
+                    return acc;
+                  }, {})
+                ).map(([mod, items]: [string, any]) => (
+                  <div key={mod} className="p-4 bg-slate-800 rounded-xl border border-slate-700">
+                    <h3 className="font-bold text-slate-200 capitalize mb-2">{mod} Module</h3>
+                    <div className="space-y-2">
+                       {items.map((item: any) => (
+                         <div key={item.actionId} className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-slate-400 capitalize">{item.actionId}</span>
+                            {item.status === 'completed' ? (
+                               <span className="text-xs font-bold bg-green-500/20 text-green-400 px-2 py-1 rounded">Completed</span>
+                            ) : (
+                               <span className="text-xs font-bold bg-slate-700 text-slate-300 px-2 py-1 rounded">Started (Step {item.stepReached})</span>
+                            )}
+                         </div>
+                       ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

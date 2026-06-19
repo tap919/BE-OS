@@ -45,17 +45,49 @@ export function FinancialQuickActions() {
     setStep(0);
     setFormData({});
     
-    // Log the interaction
     try {
       const token = await getToken();
       if (token) {
-        await fetch("/api/stats/financial", {
+        // Log the interaction
+        fetch("/api/stats/financial", {
           method: "POST",
           headers: { "Authorization": `Bearer ${token}` }
+        }).catch(e => console.error(e));
+
+        // Fetch progress and resume if available
+        const res = await fetch("/api/progress", {
+          headers: { "Authorization": `Bearer ${token}` }
         });
+        if (res.ok) {
+          const allProgress = await res.json();
+          const prog = allProgress.find((p: any) => p.module === 'financial' && p.actionId === id);
+          if (prog && prog.status !== 'completed') {
+            setStep(prog.stepReached || 0);
+            if (prog.savedData) {
+               setFormData(prog.savedData);
+               if (prog.savedData.income) setIncome(prog.savedData.income);
+            }
+          }
+        }
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const saveProgress = async (status: 'started' | 'completed', currentStep: number) => {
+    if (!activeActionId) return;
+    try {
+      const token = await getToken();
+      if (token) {
+        await fetch(`/api/progress/financial/${activeActionId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ status, stepReached: currentStep, savedData: { ...formData, income } })
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save progress', e);
     }
   };
 
@@ -64,7 +96,18 @@ export function FinancialQuickActions() {
     setStep(0);
   };
 
-  const nextStep = () => setStep((s) => s + 1);
+  const nextStep = () => {
+    const next = step + 1;
+    setStep(next);
+    saveProgress('started', next);
+  };
+
+  const handleDone = () => {
+    if (activeAction) {
+      saveProgress('completed', activeAction.steps.length - 1);
+    }
+    closeAction();
+  };
 
   const activeAction = actions.find(a => a.id === activeActionId);
 
@@ -121,7 +164,7 @@ export function FinancialQuickActions() {
          return (
            <div className="space-y-4">
              <label className="block text-sm font-medium text-slate-700">Add your largest debt</label>
-             <input type="text" className="w-full p-3 border border-slate-300 rounded-lg" placeholder="e.g. Student Loan ($10,000)" />
+             <input type="text" className="w-full p-3 border border-slate-300 rounded-lg" placeholder="e.g. Student Loan ($10,000)" value={formData.debtName || ""} onChange={e => setFormData({...formData, debtName: e.target.value})} />
            </div>
          );
        }
@@ -318,7 +361,7 @@ export function FinancialQuickActions() {
                   </button>
                 ) : (
                   <button 
-                    onClick={closeAction}
+                    onClick={handleDone}
                     className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium"
                   >
                     Done
