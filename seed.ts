@@ -2,7 +2,7 @@ import { db } from './src/db/index';
 import { resources } from './src/db/schema';
 import { eq } from 'drizzle-orm';
 
-async function seed() {
+export async function seedDatabase() {
   const data = [
     // Financial Literacy
     { id: "f1", section: "financial", title: "Budgeting 101 Guide", description: "Templates, calculators, and step-by-step guides for effective cash flow management.", url: "/tools/budgeting", type: "internal", tags: ["budgeting", "basics"] },
@@ -63,4 +63,8 @@ async function seed() {
   }
 }
 
-seed();
+import { fileURLToPath } from 'url';
+const isMain = process.argv[1] && process.argv[1] === fileURLToPath(import.meta.url);
+if (isMain) {
+  seedDatabase();
+}

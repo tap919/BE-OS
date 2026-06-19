@@ -7,20 +7,37 @@ import { resources, users, saved_resources, user_stats, blockchain_credentials, 
 import { eq, and, desc, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import crypto from "crypto";
+import { seedDatabase } from "./seed";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import fs from "fs";
 
-// Initialize Firebase Admin for token verification
-const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf-8"));
-const adminApp = initializeApp({ projectId: firebaseConfig.projectId });
-const auth = getAuth(adminApp);
+// Initialize Firebase Admin for token verification gracefully
+let adminApp;
+let auth: any = null;
+try {
+  const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf-8"));
+  adminApp = initializeApp({ projectId: firebaseConfig.projectId });
+  auth = getAuth(adminApp);
+} catch (error) {
+  console.warn("Could not read firebase-applet-config.json or initialize Firebase admin. Authentication will fail.");
+}
 
 async function startServer() {
   migrate(db, { migrationsFolder: path.join(process.cwd(), 'src/db/migrations') });
   console.log('DB migrations applied.');
+
+  try {
+    const rCount = await db.select({ count: sql<number>`count(*)` }).from(resources).get();
+    if (!rCount || rCount.count === 0) {
+      console.log('Resources table empty, scaling up seed data...');
+      await seedDatabase();
+    }
+  } catch(e) {
+    console.error('Failed to seed on startup:', e);
+  }
 
   const app = express();
   const PORT = 3000;
@@ -63,6 +80,9 @@ async function startServer() {
     }
     const idToken = authHeader.split("Bearer ")[1];
     try {
+      if (!auth) {
+        return res.status(500).json({ error: "Server missing Firebase configuration." });
+      }
       const decodedToken = await auth.verifyIdToken(idToken);
       (req as any).user = decodedToken;
       
