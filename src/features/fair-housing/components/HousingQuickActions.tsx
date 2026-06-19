@@ -217,7 +217,7 @@ export function HousingQuickActions() {
       <div className="text-center py-8">
         <ActionIcon className="w-12 h-12 text-indigo-300 mx-auto mb-4" />
         <h3 className="font-bold text-slate-700 text-lg">{activeAction.steps[step]}</h3>
-        <p className="text-sm text-slate-500 mt-2">Connecting to housing knowledge graph to process this step...</p>
+        <p className="text-sm text-slate-500 mt-2">Unhandled step {step} for {activeAction.id}</p>
       </div>
     );
   };
