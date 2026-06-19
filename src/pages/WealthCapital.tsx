@@ -3,6 +3,7 @@ import { useAuth } from "@/src/lib/AuthContext";
 import { SectionHeader } from "@/src/components/ui/LayoutBlocks";
 import { ResourceList, type Resource } from "@/src/components/ui/ResourceList";
 import { AICoach } from "@/src/components/ui/AICoach";
+import { WealthQuickActions } from "@/src/features/wealth-capital/components/WealthQuickActions";
 
 export default function WealthCapital() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -48,6 +49,14 @@ export default function WealthCapital() {
           context="matching individuals and businesses with capital, grants, loans, and venture networks"
           placeholder="I run a minority-owned tech startup in Atlanta. What grants should I look for?"
         />
+      </section>
+
+      <section>
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Quick Actions</h2>
+          <p className="text-sm text-slate-500 mt-1">Foundational tasks you can complete right now.</p>
+        </div>
+        <WealthQuickActions />
       </section>
 
       <section>

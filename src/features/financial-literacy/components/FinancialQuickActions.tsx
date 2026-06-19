@@ -117,15 +117,32 @@ export function FinancialQuickActions() {
     if (activeAction.id === "debt") {
        if (step === 0) {
          return (
-           <div className="space-y-4 text-center py-4">
-             <p className="text-slate-600">Connecting to our Debt Payoff Engine...</p>
+           <div className="space-y-4">
+             <label className="block text-sm font-medium text-slate-700">Add your largest debt</label>
+             <input type="text" className="w-full p-3 border border-slate-300 rounded-lg" placeholder="e.g. Student Loan ($10,000)" />
            </div>
          );
        }
        if (step === 1) {
          return (
-           <div className="space-y-4 text-center py-4">
-               <p className="text-slate-600">Analyzing Avalanche vs. Snowball strategies...</p>
+           <div className="space-y-4">
+             <label className="block text-sm font-medium text-slate-700">Choose Strategy</label>
+             <div className="grid grid-cols-1 gap-2">
+                 <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                    <input type="radio" name="strategy" value="avalanche" />
+                    <div>
+                      <span className="font-medium text-slate-700 block">Avalanche Method</span>
+                      <span className="text-xs text-slate-500">Pay off highest interest rate first. Saves the most money.</span>
+                    </div>
+                 </label>
+                 <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                    <input type="radio" name="strategy" value="snowball" />
+                    <div>
+                      <span className="font-medium text-slate-700 block">Snowball Method</span>
+                      <span className="text-xs text-slate-500">Pay off smallest balance first. Builds momentum.</span>
+                    </div>
+                 </label>
+             </div>
            </div>
          );
        }
@@ -134,12 +151,89 @@ export function FinancialQuickActions() {
            <div className="text-center py-4">
              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
              <h3 className="font-bold text-slate-800">Strategy Selected</h3>
-             <p className="text-slate-600 text-sm mt-2">Saved to your Vault.</p>
+             <p className="text-slate-600 text-sm mt-2">Saved your debt strategy to your Vault.</p>
            </div>
          );
        }
     }
     
+    if (activeAction.id === "emergency") {
+       if (step === 0) {
+         return (
+           <div className="space-y-4">
+             <label className="block text-sm font-medium text-slate-700">Essential Monthly Expenses</label>
+             <div className="relative">
+               <span className="absolute left-3 top-3 text-slate-500">$</span>
+               <input type="number" className="w-full p-3 pl-8 border border-slate-300 rounded-lg" placeholder="2000" />
+             </div>
+           </div>
+         );
+       }
+       if (step === 1) {
+         return (
+           <div className="space-y-4">
+             <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+               <h4 className="font-bold text-indigo-900 mb-2">Target Goals</h4>
+               <ul className="list-disc pl-5 space-y-1 text-sm text-indigo-800">
+                 <li><strong>3 Months (Basic):</strong> $6,000</li>
+                 <li><strong>6 Months (Secure):</strong> $12,000</li>
+               </ul>
+             </div>
+           </div>
+         );
+       }
+       if (step === 2) {
+         return (
+           <div className="text-center py-4">
+             <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
+             <h3 className="font-bold text-slate-800">Goal Set</h3>
+             <p className="text-slate-600 text-sm mt-2">Your emergency fund target of 3 months has been saved.</p>
+           </div>
+         );
+       }
+    }
+
+    if (activeAction.id === "investing") {
+       if (step === 0) {
+         return (
+           <div className="space-y-4">
+             <label className="block text-sm font-medium text-slate-700">What is your primary investment goal?</label>
+             <select className="w-full p-3 border border-slate-300 rounded-lg">
+               <option>Retirement</option>
+               <option>Buying a home</option>
+               <option>Generational Wealth</option>
+             </select>
+           </div>
+         );
+       }
+       if (step === 1) {
+         return (
+           <div className="space-y-4">
+             <label className="block text-sm font-medium text-slate-700">Time Horizon</label>
+             <div className="grid grid-cols-2 gap-2">
+                 <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                    <input type="radio" name="horizon" value="short" />
+                    <span className="font-medium text-sm text-slate-700">&lt; 5 years</span>
+                 </label>
+                 <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                    <input type="radio" name="horizon" value="long" />
+                    <span className="font-medium text-sm text-slate-700">10+ years</span>
+                 </label>
+             </div>
+           </div>
+         );
+       }
+       if (step === 2) {
+         return (
+           <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-900">
+               <h4 className="font-bold mb-2">Action Plan Generated</h4>
+               <p className="mb-2">For a 10+ year retirement horizon, focus on tax-advantaged accounts like a Roth IRA or 401(k) first, utilizing broad market index funds.</p>
+               <button className="w-full mt-2 p-2 bg-indigo-600 text-white rounded font-bold">Save to Vault</button>
+           </div>
+         );
+       }
+    }
+
     // Default placeholder for other steps
     if (step === activeAction.steps.length - 1) {
       return (

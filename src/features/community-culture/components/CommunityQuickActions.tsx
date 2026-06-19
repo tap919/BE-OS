@@ -220,9 +220,12 @@ export function CommunityQuickActions() {
       }
     }
 
+    // Fallback
+    const ActionIcon = activeAction.icon as React.ElementType;
+    
     return (
       <div className="text-center py-8">
-        <IconComponent className="w-12 h-12 text-indigo-300 mx-auto mb-4" icon={activeAction.icon} />
+        <ActionIcon className="w-12 h-12 text-indigo-300 mx-auto mb-4" />
         <h3 className="font-bold text-slate-700 text-lg">{activeAction.steps[step]}</h3>
         <p className="text-sm text-slate-500 mt-2">Connecting to community graph to process this step...</p>
       </div>
@@ -263,7 +266,7 @@ export function CommunityQuickActions() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-2">
-                <IconComponent className="w-5 h-5 text-indigo-600" icon={activeAction.icon} />
+                {React.createElement(activeAction.icon, { className: "w-5 h-5 text-indigo-600" })}
                 <h3 className="font-bold text-slate-800">{activeAction.title}</h3>
               </div>
               <button onClick={closeAction} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-200">

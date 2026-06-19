@@ -204,7 +204,13 @@ export function BusinessQuickActions() {
             <div className="grid grid-cols-1 gap-2">
               {["Grants (Non-dilutive)", "Federal Contracts", "Bank Loans", "Venture Capital"].map(type => (
                 <label key={type} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-                  <input type="radio" name="fundingType" value={type} />
+                  <input 
+                    type="radio" 
+                    name="fundingType" 
+                    value={type} 
+                    onChange={e => setFormData({...formData, fundingType: e.target.value})}
+                    checked={formData.fundingType === type}
+                  />
                   <span className="font-medium text-slate-700">{type}</span>
                 </label>
               ))}
@@ -226,18 +232,22 @@ export function BusinessQuickActions() {
         );
       }
       if (step === 2) {
+        const prog = formData.fundingType === "Venture Capital" ? "Black Angel Tech Fund" : 
+                     formData.fundingType === "Grants (Non-dilutive)" ? "Local State Innovation Grant" : 
+                     formData.fundingType === "Bank Loans" ? "CDFI Small Business Loan" :
+                     "SBA 8(a) Business Development Program";
         return (
           <div className="space-y-4">
             <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-900">
               <h4 className="font-bold mb-2">Recommended Program:</h4>
-              <p className="mb-2"><strong>SBA 8(a) Business Development Program:</strong> Best for your stage and focus.</p>
+              <p className="mb-2"><strong>{prog}:</strong> Best for your stage and focus.</p>
               <ul className="list-disc pl-5 space-y-1">
-                <li>Offers set-aside contracts.</li>
+                <li>Strong past performance matching your selected stage.</li>
                 <li>Provides mentorship and training.</li>
               </ul>
             </div>
             <button 
-              onClick={() => saveSnippetToVault("Saved SBA 8(a) Program outline for review.", "Funding Plan")}
+              onClick={() => saveSnippetToVault(`Saved ${prog} outline for review.`, "Funding Plan")}
               className="w-full p-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700"
             >
               Save to Vault
@@ -255,16 +265,22 @@ export function BusinessQuickActions() {
             <textarea 
               className="w-full p-3 border border-slate-300 rounded-lg h-24" 
               placeholder="e.g. I want to increase my monthly leads by 50%..."
+              value={formData.goal || ""}
+              onChange={e => setFormData({...formData, goal: e.target.value})}
             />
           </div>
         );
       }
       if (step === 1) {
+        const goalStr = (formData.goal || "").toLowerCase();
+        const recommendation = goalStr.includes("lead") ? "Optimizing your digital footprint and creating a direct lead magnet." :
+                               goalStr.includes("sale") ? "Implementing an outbound sales motion and improving conversion rates." :
+                               "Establishing clear metrics and building an organic audience engine.";
         return (
           <div className="space-y-4">
              <div className="p-4 bg-amber-50 text-amber-900 rounded-lg text-sm">
                 <p className="font-bold mb-2">AI Strategy Analysis</p>
-                <p>Based on your goal, the priority should be optimizing your digital footprint and creating a direct lead magnet.</p>
+                <p>Based on your goal, the priority should be {recommendation}</p>
              </div>
           </div>
         );
