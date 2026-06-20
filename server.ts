@@ -107,11 +107,15 @@ async function startServer() {
   // --- API Routes ---
 
   // Health check
-  app.get("/health", (req, res) => {
-    res.json({ ok: true, status: "healthy" });
-  });
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+  app.get(["/health", "/api/health"], (req, res) => {
+    try {
+      // Deep health check: verify DB connection
+      db.select().from(users).limit(1).get();
+      res.json({ status: "healthy", db: "connected", timestamp: new Date().toISOString() });
+    } catch (e) {
+      console.error("Healthcheck DB failure", e);
+      res.status(503).json({ status: "unhealthy", db: "disconnected", error: String(e) });
+    }
   });
 
   // Resource Fetch endpoint powered by real database
@@ -418,6 +422,45 @@ async function startServer() {
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Failed to fetch progress" });
+    }
+  });
+
+  // Unified Dashboard Summary
+  app.get("/api/user/dashboard-summary", requireAuth, async (req, res) => {
+    try {
+      const uid = (req as any).user.uid;
+      
+      // 1. Vault Resources
+      const userSaved = db.select({ resourceId: saved_resources.resourceId }).from(saved_resources).where(eq(saved_resources.userId, uid)).all();
+      const vaultData = [];
+      for (const item of userSaved) {
+        const resData = db.select().from(resources).where(eq(resources.id, item.resourceId)).get();
+        if (resData) vaultData.push(resData);
+      }
+      
+      // 2. Stats
+      const statsData = db.select().from(user_stats).where(eq(user_stats.userId, uid)).all();
+      
+      // 3. Progress
+      const progressData = db.select().from(module_progress).where(eq(module_progress.userId, uid)).all();
+      
+      // 4. Blockchain Credentials
+      const creds = db.select().from(blockchain_credentials).where(eq(blockchain_credentials.userId, uid)).all();
+      const circs = db.select().from(blockchain_circles).where(eq(blockchain_circles.userId, uid)).all();
+
+      // Return combined data
+      res.json({
+        vault: vaultData,
+        stats: statsData,
+        progress: progressData,
+        blockchain: {
+          credentials: creds,
+          circles: circs
+        }
+      });
+    } catch (err) {
+      console.error("Failed to build dashboard summary:", err);
+      res.status(500).json({ error: "Failed to build dashboard summary" });
     }
   });
 

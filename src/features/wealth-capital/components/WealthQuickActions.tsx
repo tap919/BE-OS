@@ -33,16 +33,23 @@ const actions = [
   }
 ];
 
+import { useGoogleIntegration } from "@/src/lib/useGoogleIntegration";
+import { createDoc, createCalendarEvent, draftEmail, createMeetSpace } from "@/src/lib/GoogleApiService";
+import { GoogleActionBanner } from "@/src/components/GoogleActionBanner";
+
 export function WealthQuickActions() {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const { getToken } = useAuth();
-  
+  const { getToken, getOAuthToken } = useAuth();
+  const { run: runGoogle, status: googleStatus, result: googleResult } = useGoogleIntegration();
+  const [googleActionMeta, setGoogleActionMeta] = useState<{ docUrl?: string; message?: string;} | null>(null);
+
   const openAction = async (id: string) => {
     setActiveActionId(id);
     setStep(0);
     setFormData({});
+    setGoogleActionMeta(null);
     
     try {
       const token = await getToken();
@@ -95,6 +102,11 @@ export function WealthQuickActions() {
     setFormData({});
   };
 
+  const forceClose = () => {
+    setGoogleActionMeta(null);
+    closeAction();
+  };
+
   const nextStep = () => {
     const next = step + 1;
     setStep(next);
@@ -103,9 +115,39 @@ export function WealthQuickActions() {
 
   const handleDone = () => {
     if (activeAction) {
+      const oauthToken = getOAuthToken();
+      if (oauthToken) {
+        if (activeActionId === 'pitch') {
+          runGoogle(async (token) => {
+            const doc = await createDoc(token, `Pitch Deck AI Review – ${new Date().toLocaleDateString()}`);
+            setGoogleActionMeta({ docUrl: (doc as any).documentUrl || (doc as any).documentId ? `https://docs.google.com/document/d/${(doc as any).documentId}/edit` : undefined, message: 'Review structured in Google Docs!' });
+            return doc;
+          });
+        } else if (activeActionId === 'grant') {
+          runGoogle(async (token) => {
+            await draftEmail(token, '', '📝 Grant Found - Apply', `<h2>Grant Opportunity</h2><p>Here is your drafted grant response based on our matches...</p>`);
+            setGoogleActionMeta({ message: 'Draft email to grant officer created in Gmail!' });
+          });
+        } else if (activeActionId === 'cdfi' || activeActionId === 'investor') {
+          runGoogle(async (token) => {
+            const evDate = new Date(); 
+            evDate.setDate(evDate.getDate() + 5);
+            await createCalendarEvent(token, {
+              summary: '👥 Meet with Match',
+              description: `Discuss funding options.`,
+              start: evDate.toISOString(),
+              end: new Date(evDate.getTime() + 3600000).toISOString(),
+            });
+            setGoogleActionMeta({ message: 'Follow-up scheduled in Calendar!' });
+          });
+        }
+      }
       saveProgress('completed', activeAction.steps.length - 1);
     }
-    closeAction();
+    
+    if (!getOAuthToken()) {
+      closeAction();
+    }
   };
 
   const activeAction = actions.find(a => a.id === activeActionId);
@@ -280,7 +322,7 @@ export function WealthQuickActions() {
                 <activeAction.icon className="w-5 h-5 text-emerald-600" />
                 <h3 className="font-bold text-slate-900">{activeAction.title}</h3>
               </div>
-              <button onClick={closeAction} className="text-slate-400 hover:text-slate-600 transition">
+              <button onClick={forceClose} className="text-slate-400 hover:text-slate-600 transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -298,6 +340,14 @@ export function WealthQuickActions() {
               </div>
 
               <div className="min-h-[150px]">
+                {googleStatus === 'loading' && (
+                  <div className="mb-4 p-4 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium animate-pulse">
+                    Connecting to Google Workspace...
+                  </div>
+                )}
+                {googleActionMeta && (
+                  <GoogleActionBanner message={googleActionMeta.message!} link={googleActionMeta.docUrl} />
+                )}
                 {renderStepContent()}
               </div>
 
@@ -311,10 +361,11 @@ export function WealthQuickActions() {
                   </button>
                 ) : (
                   <button 
-                    onClick={handleDone}
-                    className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium"
+                    onClick={googleStatus === 'success' || googleActionMeta ? forceClose : handleDone}
+                    disabled={googleStatus === 'loading'}
+                    className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium disabled:opacity-50"
                   >
-                    Done
+                    {googleStatus === 'success' || googleActionMeta ? 'Close' : 'Done'}
                   </button>
                 )}
               </div>

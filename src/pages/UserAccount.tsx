@@ -10,10 +10,12 @@ export default function UserAccount() {
   const [savedResources, setSavedResources] = useState<any[]>([]);
   const [stats, setStats] = useState<any[]>([]);
   const [progress, setProgress] = useState<any[]>([]);
+  const [blockchainInfo, setBlockchainInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const ACTION_NAMES: Record<string, string> = {
     budgeting: "50/30/20 Budgeting",
+//... (kept actions identical)
     debt: "Debt Payoff Plan",
     emergency: "Emergency Fund Setup",
     investing: "Investment Goals",
@@ -28,7 +30,11 @@ export default function UserAccount() {
     llc: "Start your LLC",
     docs: "Build core documents",
     funding: "Find funding",
-    grow: "Grow strategically"
+    grow: "Grow strategically",
+    directories: "Explore directories",
+    events: "Browse events",
+    stories: "Read community stories",
+    partner: "Find partner organizations"
   };
 
   useEffect(() => {
@@ -38,36 +44,21 @@ export default function UserAccount() {
         const token = await getToken();
         if (!token) return;
         
-        // Fetch saved resources
-        const resVault = await fetch("/api/vault/resources", {
+        const res = await fetch("/api/user/dashboard-summary", {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (resVault.ok) {
-          const data = await resVault.json();
-          setSavedResources(data);
-        }
-
-        // Fetch stats
-        const resStats = await fetch("/api/stats", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (resStats.ok) {
-          const statsData = await resStats.json();
-          // Map to nice names for chart
-          const formattedStats = statsData.map((s: any) => ({
+        if (res.ok) {
+          const data = await res.json();
+          setSavedResources(data.vault || []);
+          
+          const formattedStats = (data.stats || []).map((s: any) => ({
             name: formatSectionName(s.section),
             interactions: s.interactions
           }));
           setStats(formattedStats);
-        }
-
-        // Fetch progress
-        const resProgress = await fetch("/api/progress", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (resProgress.ok) {
-          const progData = await resProgress.json();
-          setProgress(progData);
+          
+          setProgress(data.progress || []);
+          setBlockchainInfo(data.blockchain);
         }
       } catch (err) {
         console.error("Failed to fetch data", err);
@@ -229,6 +220,43 @@ export default function UserAccount() {
               </div>
             </div>
           </div>
+          
+          {blockchainInfo && (blockchainInfo.credentials?.length > 0 || blockchainInfo.circles?.length > 0) && (
+            <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <WalletCards className="h-5 w-5 text-emerald-400" />
+                Web3 Identity
+              </h3>
+              <div className="space-y-4">
+                {blockchainInfo.credentials?.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Credentials</h4>
+                    <div className="space-y-2">
+                       {blockchainInfo.credentials.map((cred: any) => (
+                         <div key={cred.id} className="p-3 bg-slate-800 rounded border border-slate-700 text-sm flex justify-between">
+                            <span className="text-slate-300">{cred.type}</span>
+                            <span className="text-emerald-400 font-mono text-xs" title={cred.hash}>{cred.hash.substring(0,8)}...</span>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
+                )}
+                {blockchainInfo.circles?.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Lending Circles</h4>
+                    <div className="space-y-2">
+                       {blockchainInfo.circles.map((circle: any) => (
+                         <div key={circle.id} className="p-3 bg-slate-800 rounded border border-slate-700 text-sm flex justify-between">
+                            <span className="text-slate-300">{circle.name}</span>
+                            <span className="text-slate-400">Pool: ${circle.poolSize}</span>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

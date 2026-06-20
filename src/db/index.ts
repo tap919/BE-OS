@@ -4,7 +4,12 @@ import * as schema from './schema';
 import path from 'path';
 
 // Use a persistent file if not in production, or just use sqlite.db in workdir
-const dbPath = path.resolve(process.cwd(), 'sqlite.db');
+let dbPath = path.resolve(process.cwd(), 'sqlite.db');
+if (process.env.DATA_DIR) {
+  dbPath = path.resolve(process.env.DATA_DIR, 'sqlite.db');
+} else if (process.env.NODE_ENV === 'production' && require('fs').existsSync('/data')) {
+  dbPath = '/data/sqlite.db';
+}
 const sqlite = new Database(dbPath);
 
 export const db = drizzle(sqlite, { schema });

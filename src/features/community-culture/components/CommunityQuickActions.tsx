@@ -34,16 +34,25 @@ const actions = [
   },
 ];
 
+import { useGoogleIntegration } from "@/src/lib/useGoogleIntegration";
+import { createDoc, createCalendarEvent, draftEmail, createMeetSpace } from "@/src/lib/GoogleApiService";
+import { GoogleActionBanner } from "@/src/components/GoogleActionBanner";
+
 export function CommunityQuickActions() {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
-  const { getToken } = useAuth();
+  const [formData, setFormData] = useState<any>({});
+  const { getToken, getOAuthToken } = useAuth();
+  const { run: runGoogle, status: googleStatus, result: googleResult } = useGoogleIntegration();
+  const [googleActionMeta, setGoogleActionMeta] = useState<{ docUrl?: string; message?: string;} | null>(null);
   
   const activeAction = actions.find(a => a.id === activeActionId);
 
   const openAction = async (id: string) => {
     setActiveActionId(id);
     setStep(0);
+    setFormData({});
+    setGoogleActionMeta(null);
     try {
       const token = await getToken();
       if (token) {
@@ -51,15 +60,96 @@ export function CommunityQuickActions() {
           method: "POST",
           headers: { "Authorization": `Bearer ${token}` }
         });
+        
+        const res = await fetch("/api/progress", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const allProgress = await res.json();
+          const prog = allProgress.find((p: any) => p.module === 'community_culture' && p.actionId === id);
+          if (prog && prog.status !== 'completed') {
+            setStep(prog.stepReached || 0);
+            if (prog.savedData) {
+               setFormData(prog.savedData);
+            }
+          }
+        }
       }
     } catch (e) {
       console.error("Failed to log interaction", e);
     }
   };
 
+  const saveProgress = async (status: 'started' | 'completed', currentStep: number) => {
+    if (!activeActionId) return;
+    try {
+      const token = await getToken();
+      if (token) {
+        await fetch(`/api/progress/community_culture/${activeActionId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ status, stepReached: currentStep, savedData: formData })
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save progress', e);
+    }
+  };
+
   const closeAction = () => {
     setActiveActionId(null);
     setStep(0);
+    setFormData({});
+  };
+
+  const forceClose = () => {
+    setGoogleActionMeta(null);
+    closeAction();
+  };
+
+  const nextStep = () => {
+    const next = step + 1;
+    setStep(next);
+    saveProgress('started', next);
+  };
+
+  const handleDone = () => {
+    if (activeAction) {
+      const oauthToken = getOAuthToken();
+      if (oauthToken) {
+        if (activeActionId === 'events') {
+          runGoogle(async (token) => {
+            const evDate = new Date(); 
+            evDate.setDate(evDate.getDate() + 3);
+            await createCalendarEvent(token, {
+              summary: '🎪 Community Event',
+              description: `A community event you saved.`,
+              start: evDate.toISOString(),
+              end: new Date(evDate.getTime() + 3600000).toISOString(),
+            });
+            setGoogleActionMeta({ message: 'Event added to Google Calendar!' });
+          });
+        } else if (activeActionId === 'partner') {
+          runGoogle(async (token) => {
+            const meet = await createMeetSpace(token);
+            await draftEmail(token, '', '🤝 Partnership inquiry', `<h2>Hello from BE-OS</h2><p>I would like to explore a partnership...</p>\n<p>Meet link: ${(meet as any).meetingUri || ''}</p>`);
+            setGoogleActionMeta({ message: 'Introduction drafted in Gmail with Google Meet link!' });
+          });
+        } else if (activeActionId === 'stories' || activeActionId === 'directories') {
+          runGoogle(async (token) => {
+            const doc = await createDoc(token, `${activeActionId === 'directories' ? 'Directory' : 'Community Story'} - ${new Date().toLocaleDateString()}`);
+            setGoogleActionMeta({ docUrl: (doc as any).documentUrl || (doc as any).documentId ? `https://docs.google.com/document/d/${(doc as any).documentId}/edit` : undefined, message: 'Saved to Google Docs!' });
+            return doc;
+          });
+        }
+      }
+
+      saveProgress('completed', activeAction.steps.length - 1);
+    }
+    
+    if (!getOAuthToken()) {
+      closeAction();
+    }
   };
 
   const renderStepContent = () => {
@@ -269,7 +359,7 @@ export function CommunityQuickActions() {
                 {React.createElement(activeAction.icon, { className: "w-5 h-5 text-indigo-600" })}
                 <h3 className="font-bold text-slate-800">{activeAction.title}</h3>
               </div>
-              <button onClick={closeAction} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-200">
+              <button onClick={forceClose} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -283,6 +373,14 @@ export function CommunityQuickActions() {
             </div>
 
             <div className="p-6 h-[300px] overflow-y-auto">
+              {googleStatus === 'loading' && (
+                <div className="mb-4 p-4 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium animate-pulse">
+                  Connecting to Google Workspace...
+                </div>
+              )}
+              {googleActionMeta && (
+                <GoogleActionBanner message={googleActionMeta.message!} link={googleActionMeta.docUrl} />
+              )}
               {renderStepContent()}
             </div>
 
@@ -297,17 +395,18 @@ export function CommunityQuickActions() {
               
               {step < activeAction.steps.length - 1 ? (
                 <button 
-                  onClick={() => setStep(step + 1)}
+                  onClick={nextStep}
                   className="px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 rounded-lg flex items-center gap-1"
                 >
                   Continue <ChevronRight className="w-4 h-4" />
                 </button>
               ) : (
                 <button 
-                  onClick={() => { alert("Action completed."); closeAction(); }}
-                  className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg flex items-center gap-1"
+                  onClick={googleStatus === 'success' || googleActionMeta ? forceClose : handleDone}
+                  disabled={googleStatus === 'loading'}
+                  className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg flex items-center gap-1 disabled:opacity-50"
                 >
-                  Complete
+                  {googleStatus === 'success' || googleActionMeta ? 'Close' : 'Complete'}
                 </button>
               )}
             </div>
