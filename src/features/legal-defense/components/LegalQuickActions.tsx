@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Scale, BookOpen, Shield, Search, X, CheckCircle } from "lucide-react";
 import { useAuth } from "@/src/lib/AuthContext";
+import { useGoogleIntegration } from "@/src/lib/useGoogleIntegration";
+import { createDoc, createCalendarEvent, draftEmail } from "@/src/lib/GoogleApiService";
+import { GoogleActionBanner } from "@/src/components/GoogleActionBanner";
 
 const actions = [
   {
@@ -37,12 +40,17 @@ export function LegalQuickActions() {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const { getToken } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const { getToken, getOAuthToken } = useAuth();
+  const { run: runGoogle, status: googleStatus, result: googleResult } = useGoogleIntegration();
+  const [googleActionMeta, setGoogleActionMeta] = useState<{ docUrl?: string; message?: string;} | null>(null);
 
   const openAction = async (id: string) => {
     setActiveActionId(id);
     setStep(0);
     setFormData({});
+    setSearchTerm("");
+    setGoogleActionMeta(null);
     
     try {
       const token = await getToken();
@@ -94,6 +102,11 @@ export function LegalQuickActions() {
     setStep(0);
     setFormData({});
   };
+  
+  const forceClose = () => {
+    setGoogleActionMeta(null);
+    closeAction();
+  };
 
   const nextStep = () => {
     const next = step + 1;
@@ -103,9 +116,36 @@ export function LegalQuickActions() {
 
   const handleDone = () => {
     if (activeAction) {
+      const oauthToken = getOAuthToken();
+      if (oauthToken) {
+        if (activeActionId === 'tenant') {
+          runGoogle(async (token) => {
+            const reviewDate = new Date(); 
+            reviewDate.setDate(reviewDate.getDate() + 14);
+            await createCalendarEvent(token, {
+              summary: '🏠 Tenant Repair/Notice Follow-up',
+              description: `Follow up with landlord regarding the recent notice.`,
+              start: reviewDate.toISOString(),
+              end: new Date(reviewDate.getTime() + 3600000).toISOString(),
+            });
+            await draftEmail(token, '', '📝 Response to Notice', `<h2>Tenant Notice Response</h2><p>Dear Landlord, I am writing regarding...</p>`);
+            setGoogleActionMeta({ message: 'Response drafted in Gmail and follow-up scheduled in Calendar!' });
+          });
+        } else if (activeActionId === 'search') {
+          runGoogle(async (token) => {
+            const doc = await createDoc(token, `Case Law Notes – ${searchTerm} – ${new Date().toLocaleDateString()}`);
+            setGoogleActionMeta({ docUrl: (doc as any).documentUrl || (doc as any).documentId ? `https://docs.google.com/document/d/${(doc as any).documentId}/edit` : undefined, message: 'Case law research saved to Google Docs!' });
+            return doc;
+          });
+        }
+      }
+      
       saveProgress('completed', activeAction.steps.length - 1);
     }
-    closeAction();
+    
+    if (!getOAuthToken()) {
+      closeAction();
+    }
   };
 
   const activeAction = actions.find(a => a.id === activeActionId);
@@ -229,7 +269,7 @@ export function LegalQuickActions() {
         return (
           <div className="space-y-4">
             <label className="block text-sm font-medium text-slate-700">Enter keywords (e.g., "wrongful termination", "tenant rights")</label>
-            <input type="text" className="w-full p-3 border border-slate-300 rounded-lg" placeholder="Enter keywords..." />
+            <input type="text" className="w-full p-3 border border-slate-300 rounded-lg" placeholder="Enter keywords..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
         );
       }
@@ -303,7 +343,7 @@ export function LegalQuickActions() {
                 <activeAction.icon className="w-5 h-5 text-indigo-600" />
                 <h3 className="font-bold text-slate-800">{activeAction.title}</h3>
               </div>
-              <button onClick={closeAction} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <button onClick={forceClose} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -318,6 +358,16 @@ export function LegalQuickActions() {
               <div className="mb-6">
                 <h4 className="text-sm font-bold text-indigo-600 uppercase tracking-wider mb-2">Step {step + 1}</h4>
                 <p className="font-medium text-slate-800 mb-4">{activeAction.steps[step]}</p>
+                
+                {googleStatus === 'loading' && (
+                  <div className="mb-4 p-4 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium animate-pulse">
+                    Connecting to Google Workspace...
+                  </div>
+                )}
+                {googleActionMeta && (
+                  <GoogleActionBanner message={googleActionMeta.message!} link={googleActionMeta.docUrl} />
+                )}
+
                 {renderStepContent()}
               </div>
 
@@ -327,8 +377,12 @@ export function LegalQuickActions() {
                     Continue &rarr;
                   </button>
                 ) : (
-                  <button onClick={handleDone} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors">
-                    Finish & Save
+                  <button 
+                    onClick={googleStatus === 'success' || googleActionMeta ? forceClose : handleDone}
+                    disabled={googleStatus === 'loading'}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {googleStatus === 'success' || googleActionMeta ? 'Close' : 'Finish & Save'}
                   </button>
                 )}
               </div>

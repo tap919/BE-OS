@@ -2,6 +2,22 @@
 import React, { useState } from "react";
 import { Home, FileText, ShieldAlert, Scale, X, ChevronRight, CheckCircle } from "lucide-react";
 import { useAuth } from "@/src/lib/AuthContext";
+import { useGoogleIntegration } from "@/src/lib/useGoogleIntegration";
+import { createDoc, createCalendarEvent, draftEmail } from "@/src/lib/GoogleApiService";
+import { GoogleActionBanner } from "@/src/components/GoogleActionBanner";
+
+const MapsEmbed = ({ zip }: { zip: string }) => {
+  const mapKey = (import.meta as any).env.VITE_MAPS_API_KEY;
+  if (!mapKey) return <div className="p-4 bg-slate-100 text-slate-500 rounded-lg text-sm text-center">Google Maps integration requires VITE_MAPS_API_KEY</div>;
+  return (
+    <iframe
+      width="100%" height="300"
+      style={{ border: 0, borderRadius: '0.5rem' }}
+      loading="lazy"
+      src={`https://www.google.com/maps/embed/v1/search?key=${mapKey}&q=legal+aid+near+${zip}`}
+    />
+  );
+};
 
 const actions = [
   {
@@ -37,13 +53,18 @@ const actions = [
 export function HousingQuickActions() {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
-  const { getToken } = useAuth();
+  const [zipCode, setZipCode] = useState("");
+  const { getToken, getOAuthToken } = useAuth();
+  const { run: runGoogle, status: googleStatus, result: googleResult } = useGoogleIntegration();
+  const [googleActionMeta, setGoogleActionMeta] = useState<{ docUrl?: string; message?: string;} | null>(null);
   
   const activeAction = actions.find(a => a.id === activeActionId);
 
   const openAction = async (id: string) => {
     setActiveActionId(id);
     setStep(0);
+    setGoogleActionMeta(null);
+    setZipCode("");
     try {
       const token = await getToken();
       if (token) {
@@ -57,9 +78,68 @@ export function HousingQuickActions() {
     }
   };
 
+  const saveProgress = async (status: 'started' | 'completed', currentStep: number) => {
+    if (!activeActionId) return;
+    try {
+      const token = await getToken();
+      if (token) {
+        await fetch(`/api/progress/fair_housing/${activeActionId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ status, stepReached: currentStep })
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save progress', e);
+    }
+  };
+
   const closeAction = () => {
     setActiveActionId(null);
     setStep(0);
+  };
+  
+  const forceClose = () => {
+    setGoogleActionMeta(null);
+    closeAction();
+  };
+
+  const nextStep = () => {
+    const next = step + 1;
+    setStep(next);
+    saveProgress('started', next);
+  };
+
+  const handleDone = () => {
+    if (activeAction) {
+      const oauthToken = getOAuthToken();
+      if (oauthToken) {
+        if (activeActionId === 'lease') {
+          runGoogle(async (token) => {
+            const doc = await createDoc(token, `Lease Review – ${new Date().toLocaleDateString()}`);
+            setGoogleActionMeta({ docUrl: (doc as any).documentUrl || (doc as any).documentId ? `https://docs.google.com/document/d/${(doc as any).documentId}/edit` : undefined, message: 'Lease Review saved to Google Docs!' });
+            return doc;
+          });
+        } else if (activeActionId === 'bias') {
+          runGoogle(async (token) => {
+            await draftEmail(token, 'complaints@hud.gov', '📝 Fair Housing Complaint', `<h2>Fair Housing Complaint</h2><p>I am writing to report an incident...</p>`);
+            setGoogleActionMeta({ message: 'HUD complaint draft created in Gmail!' });
+          });
+        } else if (activeActionId === 'homeownership') {
+          runGoogle(async (token) => {
+            const doc = await createDoc(token, `Homeownership Checklist – ${new Date().toLocaleDateString()}`);
+            setGoogleActionMeta({ docUrl: (doc as any).documentUrl || (doc as any).documentId ? `https://docs.google.com/document/d/${(doc as any).documentId}/edit` : undefined, message: 'Homeownership Checklist saved to Google Docs!' });
+            return doc;
+          });
+        }
+      }
+      
+      saveProgress('completed', activeAction.steps.length - 1);
+    }
+    
+    if (!getOAuthToken()) {
+      closeAction();
+    }
   };
 
   const renderStepContent = () => {
@@ -104,12 +184,20 @@ export function HousingQuickActions() {
         return (
           <div className="space-y-4">
             <label className="block text-sm font-medium text-slate-700">Select your state</label>
-            <select className="w-full p-3 border border-slate-300 rounded-lg">
+            <select className="w-full p-3 border border-slate-300 rounded-lg mb-2">
               <option>New York</option>
               <option>California</option>
               <option>Texas</option>
               <option>Georgia</option>
             </select>
+            <label className="block text-sm font-medium text-slate-700">Enter your Zip Code</label>
+            <input 
+              type="text" 
+              className="w-full p-3 border border-slate-300 rounded-lg" 
+              placeholder="e.g. 10001" 
+              value={zipCode}
+              onChange={e => setZipCode(e.target.value)}
+            />
           </div>
         );
       }
@@ -126,13 +214,21 @@ export function HousingQuickActions() {
       }
       if (step === 2) {
          return (
-           <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700">
-             <h4 className="font-bold mb-2">Your Immediate Rights:</h4>
-             <ul className="list-disc pl-5 space-y-1">
-               <li>Self-help eviction (changing locks) by landlord is illegal.</li>
-               <li>You have the right to a court hearing.</li>
-               <li>Possible defenses: failure to maintain habitable premises.</li>
-             </ul>
+           <div className="space-y-4">
+             <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700">
+               <h4 className="font-bold mb-2">Your Immediate Rights:</h4>
+               <ul className="list-disc pl-5 space-y-1">
+                 <li>Self-help eviction (changing locks) by landlord is illegal.</li>
+                 <li>You have the right to a court hearing.</li>
+                 <li>Possible defenses: failure to maintain habitable premises.</li>
+               </ul>
+             </div>
+             {zipCode && (
+               <div>
+                  <h4 className="font-bold text-sm mb-2 text-slate-700">Nearest Legal Aid Offices:</h4>
+                  <MapsEmbed zip={zipCode} />
+               </div>
+             )}
            </div>
          );
       }
@@ -259,7 +355,7 @@ export function HousingQuickActions() {
                 {React.createElement(activeAction.icon, { className: "w-5 h-5 text-indigo-600" })}
                 <h3 className="font-bold text-slate-800">{activeAction.title}</h3>
               </div>
-              <button onClick={closeAction} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-200">
+              <button onClick={forceClose} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -273,6 +369,14 @@ export function HousingQuickActions() {
             </div>
 
             <div className="p-6 h-[300px] overflow-y-auto">
+              {googleStatus === 'loading' && (
+                <div className="mb-4 p-4 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium animate-pulse">
+                  Connecting to Google Workspace...
+                </div>
+              )}
+              {googleActionMeta && (
+                <GoogleActionBanner message={googleActionMeta.message!} link={googleActionMeta.docUrl} />
+              )}
               {renderStepContent()}
             </div>
 
@@ -287,17 +391,18 @@ export function HousingQuickActions() {
               
               {step < activeAction.steps.length - 1 ? (
                 <button 
-                  onClick={() => setStep(step + 1)}
+                  onClick={nextStep}
                   className="px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 rounded-lg flex items-center gap-1"
                 >
                   Continue <ChevronRight className="w-4 h-4" />
                 </button>
               ) : (
                 <button 
-                  onClick={() => { alert("Action completed and saved safely to your log."); closeAction(); }}
-                  className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg flex items-center gap-1"
+                  onClick={googleStatus === 'success' || googleActionMeta ? forceClose : handleDone}
+                  disabled={googleStatus === 'loading'}
+                  className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg flex items-center gap-1 disabled:opacity-50"
                 >
-                  Complete
+                  {googleStatus === 'success' || googleActionMeta ? 'Close' : 'Complete'}
                 </button>
               )}
             </div>

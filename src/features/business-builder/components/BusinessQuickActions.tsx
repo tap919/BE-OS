@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Briefcase, FileText, BadgeDollarSign, Target, CheckCircle, X, ChevronRight } from "lucide-react";
 import { useAuth } from "@/src/lib/AuthContext";
+import { useGoogleIntegration } from "@/src/lib/useGoogleIntegration";
+import { createDoc, createCalendarEvent, draftEmail, createMeetSpace } from "@/src/lib/GoogleApiService";
+import { GoogleActionBanner } from "@/src/components/GoogleActionBanner";
 
 const actions = [
   {
@@ -37,7 +40,9 @@ export function BusinessQuickActions() {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<any>({});
-  const { getToken } = useAuth();
+  const { getToken, getOAuthToken } = useAuth();
+  const { run: runGoogle, status: googleStatus, result: googleResult } = useGoogleIntegration();
+  const [googleActionMeta, setGoogleActionMeta] = useState<{ docUrl?: string; message?: string;} | null>(null);
   
   const activeAction = actions.find(a => a.id === activeActionId);
 
@@ -96,6 +101,11 @@ export function BusinessQuickActions() {
     setStep(0);
     setFormData({});
   };
+  
+  const forceClose = () => {
+    setGoogleActionMeta(null);
+    closeAction();
+  };
 
   const nextStep = () => {
     if (activeAction && step < activeAction.steps.length - 1) {
@@ -107,9 +117,45 @@ export function BusinessQuickActions() {
 
   const handleDone = () => {
     if (activeAction) {
+      const oauthToken = getOAuthToken();
+      if (oauthToken) {
+        if (activeActionId === 'llc') {
+          runGoogle(async (token) => {
+            const reviewDate = new Date(); 
+            reviewDate.setDate(reviewDate.getDate() + 14);
+            await createCalendarEvent(token, {
+              summary: '🏢 LLC Registration Check',
+              description: `Check the status of your LLC filing.`,
+              start: reviewDate.toISOString(),
+              end: new Date(reviewDate.getTime() + 3600000).toISOString(),
+            });
+            setGoogleActionMeta({ message: 'LLC Check-in scheduled in Google Calendar!' });
+          });
+        } else if (activeActionId === 'docs') {
+          runGoogle(async (token) => {
+            const doc = await createDoc(token, `Business Document – ${new Date().toLocaleDateString()}`);
+            setGoogleActionMeta({ docUrl: (doc as any).documentUrl || (doc as any).documentId ? `https://docs.google.com/document/d/${(doc as any).documentId}/edit` : undefined, message: 'Business doc created!' });
+            return doc;
+          });
+        } else if (activeActionId === 'funding') {
+          runGoogle(async (token) => {
+            await draftEmail(token, '', '📝 Grant Application Draft', `<h2>Grant Application</h2><p>Here is my drafted cover letter for the grant...</p>`);
+            setGoogleActionMeta({ message: 'Grant application email drafted in Gmail!' });
+          });
+        } else if (activeActionId === 'grow') {
+          runGoogle(async (token) => {
+            const meet = await createMeetSpace(token);
+            setGoogleActionMeta({ message: `Mentorship / Strategy meeting room created! URL: ${(meet as any).meetingUri || 'Ready format'}` });
+            return meet;
+          });
+        }
+      }
+      
       saveProgress('completed', activeAction.steps.length - 1);
     }
-    closeAction();
+    if (!getOAuthToken()) {
+      closeAction();
+    }
   };
 
   const prevStep = () => {
@@ -402,7 +448,7 @@ export function BusinessQuickActions() {
                 <IconComponent className="w-5 h-5 text-indigo-600" icon={activeAction.icon} />
                 <h3 className="font-bold text-slate-800">{activeAction.title}</h3>
               </div>
-              <button onClick={closeAction} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-200">
+              <button onClick={forceClose} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -418,6 +464,14 @@ export function BusinessQuickActions() {
 
             {/* Content */}
             <div className="p-6 h-[300px] overflow-y-auto">
+              {googleStatus === 'loading' && (
+                <div className="mb-4 p-4 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium animate-pulse">
+                  Connecting to Google Workspace...
+                </div>
+              )}
+              {googleActionMeta && (
+                <GoogleActionBanner message={googleActionMeta.message!} link={googleActionMeta.docUrl} />
+              )}
               {renderStepContent()}
             </div>
 
@@ -438,7 +492,15 @@ export function BusinessQuickActions() {
                 >
                   Continue <ChevronRight className="w-4 h-4" />
                 </button>
-              ) : null}
+              ) : (
+                <button 
+                  onClick={googleStatus === 'success' || googleActionMeta ? forceClose : handleDone}
+                  disabled={googleStatus === 'loading'}
+                  className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg flex items-center gap-1 disabled:opacity-50"
+                >
+                  {googleStatus === 'success' || googleActionMeta ? 'Close' : 'Done'}
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Calculator, Wallet, DollarSign, Target, X, CheckCircle } from "lucide-react";
 import { useAuth } from "@/src/lib/AuthContext";
+import { useGoogleIntegration } from "@/src/lib/useGoogleIntegration";
+import { createDoc, createCalendarEvent, draftEmail } from "@/src/lib/GoogleApiService";
+import { GoogleActionBanner } from "@/src/components/GoogleActionBanner";
 
 const actions = [
   {
@@ -39,7 +42,8 @@ export function FinancialQuickActions() {
   const [income, setIncome] = useState<string>("4000");
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const { getToken } = useAuth();
+  const { getToken, getOAuthToken } = useAuth();
+  const { run: runGoogle, status: googleStatus, result: googleResult } = useGoogleIntegration();
 
   const openAction = async (id: string) => {
     setActiveActionId(id);
@@ -108,10 +112,62 @@ export function FinancialQuickActions() {
     saveProgress('started', next);
   };
 
-  const handleDone = () => {
+  const [googleActionMeta, setGoogleActionMeta] = useState<{ docUrl?: string; message?: string;} | null>(null);
+
+  const handleDone = async () => {
     if (activeAction) {
+      const oauthToken = getOAuthToken();
+      if (oauthToken) {
+        if (activeActionId === 'budgeting') {
+          runGoogle(async (token) => {
+            const doc = await createDoc(token, `My Budget Plan – ${new Date().toLocaleDateString()}`);
+            const reviewDate = new Date(); 
+            reviewDate.setDate(reviewDate.getDate() + 30);
+            await createCalendarEvent(token, {
+              summary: '📊 Monthly Budget Review',
+              description: `Review your 50/30/20 budget. Needs: $${Math.round(+income*0.5)}, Wants: $${Math.round(+income*0.3)}, Savings: $${Math.round(+income*0.2)}`,
+              start: reviewDate.toISOString(),
+              end: new Date(reviewDate.getTime() + 3600000).toISOString(),
+            });
+            setGoogleActionMeta({ docUrl: (doc as any).documentUrl || (doc as any).documentId ? `https://docs.google.com/document/d/${(doc as any).documentId}/edit` : undefined, message: 'Budget doc + calendar reminder created!' });
+            return doc;
+          });
+        } else if (activeActionId === 'debt') {
+          runGoogle(async (token) => {
+            await draftEmail(token, '', '📝 Debt Payoff Commitment', `<h2>My Debt Payoff Plan</h2><p>I am committing to paying off my debt using the ${formData.strategy || 'Avalanche'} method.</p><p>Stay focused!</p>`);
+            setGoogleActionMeta({ message: 'Debt payoff commitment email drafted in Gmail!' });
+          });
+        } else if (activeActionId === 'emergency') {
+          runGoogle(async (token) => {
+            const reviewDate = new Date(); 
+            reviewDate.setDate(reviewDate.getDate() + 30);
+            await createCalendarEvent(token, {
+              summary: '💰 Emergency Fund Check-in',
+              description: `Monthly check-in on emergency fund progress.`,
+              start: reviewDate.toISOString(),
+              end: new Date(reviewDate.getTime() + 3600000).toISOString(),
+            });
+            setGoogleActionMeta({ message: 'Monthly Emergency Fund check-in scheduled!' });
+          });
+        } else if (activeActionId === 'investing') {
+          runGoogle(async (token) => {
+            const doc = await createDoc(token, `Investment Goals – ${new Date().toLocaleDateString()}`);
+            setGoogleActionMeta({ docUrl: (doc as any).documentUrl || (doc as any).documentId ? `https://docs.google.com/document/d/${(doc as any).documentId}/edit` : undefined, message: 'Investment Goals doc created!' });
+            return doc;
+          });
+        }
+      }
+      
       saveProgress('completed', activeAction.steps.length - 1);
     }
+    
+    if (!getOAuthToken()) {
+      closeAction();
+    }
+  };
+
+  const forceClose = () => {
+    setGoogleActionMeta(null);
     closeAction();
   };
 
@@ -336,7 +392,7 @@ export function FinancialQuickActions() {
                 <activeAction.icon className="w-5 h-5 text-indigo-600" />
                 <h3 className="font-bold text-slate-900">{activeAction.title}</h3>
               </div>
-              <button onClick={closeAction} className="text-slate-400 hover:text-slate-600 transition">
+              <button onClick={forceClose} className="text-slate-400 hover:text-slate-600 transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -359,6 +415,16 @@ export function FinancialQuickActions() {
                     {errorMsg}
                   </div>
                 )}
+                
+                {googleStatus === 'loading' && (
+                  <div className="mb-4 p-4 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium animate-pulse">
+                    Connecting to Google Workspace...
+                  </div>
+                )}
+                {googleActionMeta && (
+                  <GoogleActionBanner message={googleActionMeta.message!} link={googleActionMeta.docUrl} />
+                )}
+
                 {renderStepContent()}
               </div>
 
@@ -372,10 +438,11 @@ export function FinancialQuickActions() {
                   </button>
                 ) : (
                   <button 
-                    onClick={handleDone}
-                    className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium"
+                    onClick={googleStatus === 'success' || googleActionMeta ? forceClose : handleDone}
+                    disabled={googleStatus === 'loading'}
+                    className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium disabled:opacity-50"
                   >
-                    Done
+                    {googleStatus === 'success' || googleActionMeta ? 'Close' : 'Done'}
                   </button>
                 )}
               </div>
