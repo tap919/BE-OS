@@ -150,7 +150,7 @@ export default function UserAccount() {
               <p className="text-slate-400">Interact with quick actions across the platform to build your activity profile.</p>
             ) : (
               <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                   <BarChart data={stats} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
                     <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />

@@ -43,6 +43,10 @@ export const blockchain_credentials = sqliteTable('blockchain_credentials', {
   date: text('date').notNull(),
   hash: text('hash').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }),
+}, (table) => {
+  return {
+    userIdx: index('blockchain_credentials_user_id_idx').on(table.userId),
+  };
 });
 
 export const blockchain_circles = sqliteTable('blockchain_circles', {
@@ -52,6 +56,10 @@ export const blockchain_circles = sqliteTable('blockchain_circles', {
   poolSize: text('pool_size').notNull(),
   status: text('status').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }),
+}, (table) => {
+  return {
+    userIdx: index('blockchain_circles_user_id_idx').on(table.userId),
+  };
 });
 
 export const blockchain_grants = sqliteTable('blockchain_grants', {
@@ -61,6 +69,10 @@ export const blockchain_grants = sqliteTable('blockchain_grants', {
   amount: text('amount').notNull(),
   status: text('status').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }),
+}, (table) => {
+  return {
+    userIdx: index('blockchain_grants_user_id_idx').on(table.userId),
+  };
 });
 
 export const user_stats = sqliteTable('user_stats', {

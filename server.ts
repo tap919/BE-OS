@@ -72,6 +72,9 @@ export async function buildApp() {
   });
   app.use("/api/", globalLimiter);
 
+  // Cache set to limit DB writes during auth
+  const seenUsers = new Set<string>();
+
   // Auth Middleware
   const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers.authorization;
@@ -86,15 +89,18 @@ export async function buildApp() {
       const decodedToken = await auth.verifyIdToken(idToken);
       (req as any).user = decodedToken;
       
-      try {
-        db.insert(users).values({
-          id: decodedToken.uid,
-          email: decodedToken.email || "",
-          role: "user",
-          createdAt: new Date()
-        }).onConflictDoNothing().run();
-      } catch (dbErr) {
-        console.error("Failed to sync user to DB:", dbErr);
+      if (!seenUsers.has(decodedToken.uid)) {
+        try {
+          db.insert(users).values({
+            id: decodedToken.uid,
+            email: decodedToken.email || "",
+            role: "user",
+            createdAt: new Date()
+          }).onConflictDoNothing().run();
+          seenUsers.add(decodedToken.uid);
+        } catch (dbErr) {
+          console.error("Failed to sync user to DB:", dbErr);
+        }
       }
 
       next();

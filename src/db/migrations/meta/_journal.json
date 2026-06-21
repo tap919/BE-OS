@@ -15,6 +15,13 @@
       "when": 1781868273743,
       "tag": "0001_past_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782062539885,
+      "tag": "0002_productive_wong",
+      "breakpoints": true
     }
   ]
 }
