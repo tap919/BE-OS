@@ -8,4 +8,6 @@ coverage/
 !.env.example
 sqlite.db
 sqlite.db-journal
+sqlite.db-shm
+sqlite.db-wal
 firebase-applet-config.json

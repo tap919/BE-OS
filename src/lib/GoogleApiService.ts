@@ -58,6 +58,11 @@ export const listDriveFiles = async (token: string, query = '') =>
   fetch(`${BASE.drive}/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink,modifiedTime)`,
     { headers: g(token) }).then(r => r.json());
 
+// ── PEOPLE / CONTACTS ─────────────────────────────────────
+export const listContacts = async (token: string, limit = 10) =>
+  fetch(`https://people.googleapis.com/v1/people/me/connections?pageSize=${limit}&personFields=names,emailAddresses,phoneNumbers`,
+    { headers: g(token) }).then(r => r.json());
+
 // ── MEET ──────────────────────────────────────────────────
 export const createMeetSpace = async (token: string) =>
   fetch(`${BASE.meet}/spaces`, {

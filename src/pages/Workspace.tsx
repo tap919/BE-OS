@@ -3,7 +3,7 @@ import { useAuth } from "@/src/lib/AuthContext";
 import { SectionHeader, Grid, Card } from "@/src/components/ui/LayoutBlocks";
 import { FileDown, Mail, Calendar, Users, FileText, Video, Lock } from "lucide-react";
 import { useGoogleIntegration } from "@/src/lib/useGoogleIntegration";
-import { createDoc, createMeetSpace } from "@/src/lib/GoogleApiService";
+import { createDoc, createMeetSpace, listContacts } from "@/src/lib/GoogleApiService";
 import { GoogleActionBanner } from "@/src/components/GoogleActionBanner";
 
 export default function WorkspaceHub() {
@@ -186,7 +186,16 @@ export default function WorkspaceHub() {
         }} className="block text-left disabled:opacity-50" disabled={googleStatus === 'loading'}>
             <Card title="Create Business Doc" description="Draft a new Google Doc using AI coach templates." icon={FileText} />
         </button>
-        <a href="https://contacts.google.com/" target="_blank" rel="noopener noreferrer" className="block"><Card title="Sync Contacts" description="Import and verify contacts from your Google network." icon={Users} /></a>
+        <button onClick={() => {
+            setGoogleActionMeta(null);
+            runGoogle(async (token) => {
+              const contacts = await listContacts(token);
+              const count = contacts.connections ? contacts.connections.length : 0;
+              setGoogleActionMeta({ message: `Successfully synced ${count} contacts from your Google network.` });
+            });
+        }} className="block text-left disabled:opacity-50" disabled={googleStatus === 'loading'}>
+            <Card title="Sync Contacts" description="Import and verify contacts from your Google network." icon={Users} />
+        </button>
       </Grid>
     </div>
   );

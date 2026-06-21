@@ -67,8 +67,12 @@ export function FinancialQuickActions() {
         if (res.ok) {
           const allProgress = await res.json();
           const prog = allProgress.find((p: any) => p.module === 'financial' && p.actionId === id);
-          if (prog && prog.status !== 'completed') {
-            setStep(prog.stepReached || 0);
+          if (prog) {
+            if (prog.status !== 'completed') {
+              setStep(prog.stepReached || 0);
+            } else {
+              setStep(actions.find(a => a.id === id)?.steps.length ? actions.find(a => a.id === id)!.steps.length - 1 : 0);
+            }
             if (prog.savedData) {
                setFormData(prog.savedData);
                if (prog.savedData.income) setIncome(prog.savedData.income);
@@ -125,7 +129,7 @@ export function FinancialQuickActions() {
             reviewDate.setDate(reviewDate.getDate() + 30);
             await createCalendarEvent(token, {
               summary: '📊 Monthly Budget Review',
-              description: `Review your 50/30/20 budget. Needs: $${Math.round(+income*0.5)}, Wants: $${Math.round(+income*0.3)}, Savings: $${Math.round(+income*0.2)}`,
+              description: `Review your 50/30/20 budget. Needs: $${Math.round(+(formData.income || 0)*0.5)}, Wants: $${Math.round(+(formData.income || 0)*0.3)}, Savings: $${Math.round(+(formData.income || 0)*0.2)}`,
               start: reviewDate.toISOString(),
               end: new Date(reviewDate.getTime() + 3600000).toISOString(),
             });
@@ -183,13 +187,13 @@ export function FinancialQuickActions() {
             <label className="block text-sm font-medium text-slate-700">What is your monthly after-tax income?</label>
             <div className="relative">
               <span className="absolute left-3 top-3 text-slate-500">$</span>
-              <input type="number" placeholder="4000" value={income} onChange={e => setIncome(e.target.value)} className="w-full p-3 pl-8 border border-slate-300 rounded-lg" />
+              <input type="number" placeholder="4000" value={formData.income || ""} onChange={e => setFormData({...formData, income: e.target.value})} className="w-full p-3 pl-8 border border-slate-300 rounded-lg" />
             </div>
           </div>
         );
       }
       if (step === 1) {
-        const numIncome = parseFloat(income || "0");
+        const numIncome = parseFloat(formData.income || "0");
         return (
           <div className="space-y-4">
             <h3 className="font-bold text-slate-800 text-lg">Your 50/30/20 Target Split</h3>
