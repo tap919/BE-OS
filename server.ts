@@ -25,7 +25,7 @@ try {
   console.warn("Could not read firebase-applet-config.json or initialize Firebase admin. Authentication will fail.");
 }
 
-async function startServer() {
+export async function buildApp() {
   migrate(db, { migrationsFolder: path.join(process.cwd(), 'src/db/migrations') });
   console.log('DB migrations applied.');
 
@@ -406,6 +406,27 @@ async function startServer() {
           completedAt: status === 'completed' ? new Date() : undefined 
         }
       }).run();
+
+      // **Blockchain Integration**: issue a credential if this action was completed
+      if (status === 'completed') {
+        const credType = `${module}_${actionId}_completion`;
+        const exists = db.select().from(blockchain_credentials)
+          .where(and(eq(blockchain_credentials.userId, uid), eq(blockchain_credentials.type, credType)))
+          .get();
+          
+        if (!exists) {
+          db.insert(blockchain_credentials).values({
+            id: crypto.randomUUID(),
+            userId: uid,
+            type: credType,
+            hash: `0x${crypto.randomUUID().replace(/-/g, '')}`,
+            issuer: 'System',
+            date: new Date().toISOString(),
+            createdAt: new Date()
+          }).run();
+        }
+      }
+
       res.json({ success: true });
     } catch (err) {
       console.error(err);
@@ -621,9 +642,13 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  return app;
 }
 
-startServer();
+if (!process.env.VITEST) {
+  buildApp().then(app => {
+    app.listen(3000, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:3000`);
+    });
+  });
+}

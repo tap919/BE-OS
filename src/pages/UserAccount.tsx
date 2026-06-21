@@ -34,7 +34,11 @@ export default function UserAccount() {
     directories: "Explore directories",
     events: "Browse events",
     stories: "Read community stories",
-    partner: "Find partner organizations"
+    partner: "Find partner organizations",
+    lease: "Review a lease",
+    eviction: "Check eviction rights",
+    homeownership: "Prepare for homeownership",
+    bias: "Report housing bias"
   };
 
   useEffect(() => {
@@ -80,6 +84,15 @@ export default function UserAccount() {
     };
     return names[key] || key;
   };
+
+  if (!user) {
+    return (
+      <div className="p-6 lg:p-10 flex flex-col items-center justify-center h-[50vh] text-center">
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Account & Dashboard</h2>
+        <p className="text-slate-500 mb-6">Please sign in to view your dashboard.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-10">

@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/src/lib/AuthContext";
 import { SectionHeader, Grid, Card } from "@/src/components/ui/LayoutBlocks";
 import { FileDown, Mail, Calendar, Users, FileText, Video, Lock } from "lucide-react";
+import { useGoogleIntegration } from "@/src/lib/useGoogleIntegration";
+import { createDoc, createMeetSpace } from "@/src/lib/GoogleApiService";
+import { GoogleActionBanner } from "@/src/components/GoogleActionBanner";
 
 export default function WorkspaceHub() {
   const { user, getOAuthToken, signInWithGoogle } = useAuth();
@@ -10,6 +13,8 @@ export default function WorkspaceHub() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { run: runGoogle, status: googleStatus } = useGoogleIntegration();
+  const [googleActionMeta, setGoogleActionMeta] = useState<{ docUrl?: string; message?: string;} | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -153,9 +158,34 @@ export default function WorkspaceHub() {
       </div>
 
       <h2 className="text-xl font-bold text-slate-900 mb-2 mt-4">Workspace Actions</h2>
+      {googleStatus === 'loading' && (
+        <div className="mb-4 p-4 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium animate-pulse">
+          Connecting to Google Workspace...
+        </div>
+      )}
+      {googleActionMeta && (
+        <GoogleActionBanner message={googleActionMeta.message!} link={googleActionMeta.docUrl} />
+      )}
       <Grid>
-        <a href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer" className="block"><Card title="Start Google Meet" description="Generate a secure video link for networking meetings." icon={Video} /></a>
-        <a href="https://docs.google.com/document/create" target="_blank" rel="noopener noreferrer" className="block"><Card title="Create Business Doc" description="Draft a new Google Doc using AI coach templates." icon={FileText} /></a>
+        <button onClick={() => {
+            setGoogleActionMeta(null);
+            runGoogle(async (token) => {
+              const meet = await createMeetSpace(token);
+              setGoogleActionMeta({ message: `Secure networking Meet room created! URL: ${(meet as any).meetingUri || 'Success'}` });
+            });
+        }} className="block text-left disabled:opacity-50" disabled={googleStatus === 'loading'}>
+            <Card title="Start Google Meet" description="Generate a secure video link for networking meetings." icon={Video} />
+        </button>
+        <button onClick={() => {
+            setGoogleActionMeta(null);
+            runGoogle(async (token) => {
+              const doc = await createDoc(token, `Business Requirements Draft - ${new Date().toLocaleDateString()}`);
+              setGoogleActionMeta({ docUrl: (doc as any).documentUrl || (doc as any).documentId ? `https://docs.google.com/document/d/${(doc as any).documentId}/edit` : undefined, message: 'Google Doc created successfully!' });
+              fetchWorkspaceData();
+            });
+        }} className="block text-left disabled:opacity-50" disabled={googleStatus === 'loading'}>
+            <Card title="Create Business Doc" description="Draft a new Google Doc using AI coach templates." icon={FileText} />
+        </button>
         <a href="https://contacts.google.com/" target="_blank" rel="noopener noreferrer" className="block"><Card title="Sync Contacts" description="Import and verify contacts from your Google network." icon={Users} /></a>
       </Grid>
     </div>

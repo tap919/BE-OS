@@ -11,5 +11,6 @@ if (process.env.DATA_DIR) {
   dbPath = '/data/sqlite.db';
 }
 const sqlite = new Database(dbPath);
+sqlite.pragma('journal_mode = WAL');
 
 export const db = drizzle(sqlite, { schema });
