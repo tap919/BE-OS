@@ -34,16 +34,15 @@ let app: any;
 beforeAll(async () => {
   app = await buildApp();
   
-  // We need to inject an admin user in the db for the admin tests to pass
+  // We need to inject users in the db for the tests to pass
   const { db } = await import('../src/db/index');
   const { users } = await import('../src/db/schema');
   try {
-    db.insert(users).values({
-      id: 'mock_admin',
-      email: 'admin@example.com',
-      role: 'admin',
-      createdAt: new Date()
-    }).onConflictDoNothing().run();
+    db.insert(users).values([
+      { id: 'mock_admin', email: 'admin@example.com', role: 'admin', createdAt: new Date() },
+      { id: 'mock_uid', email: 'test@example.com', role: 'user', createdAt: new Date() },
+      { id: 'mock_uid_1', email: 'user1@example.com', role: 'user', createdAt: new Date() }
+    ]).onConflictDoNothing().run();
   } catch (e) {
     console.error(e);
   }

@@ -1,5 +1,5 @@
-import { db } from './src/db/index';
-import { resources } from './src/db/schema';
+import { db } from '../index';
+import { resources } from '../schema';
 import { eq } from 'drizzle-orm';
 
 export async function seedDatabase() {
@@ -64,7 +64,7 @@ export async function seedDatabase() {
 }
 
 import { fileURLToPath } from 'url';
-const isMain = process.argv[1] && process.argv[1] === fileURLToPath(import.meta.url);
+const isMain = process.argv[1] && process.argv[1].endsWith('seed.ts');
 if (isMain) {
   seedDatabase();
 }
